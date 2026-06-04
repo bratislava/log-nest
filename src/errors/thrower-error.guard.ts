@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common'
 import { AxiosError } from 'axios'
 
-import { NEST_LOGGING_OPTIONS, NestLoggingOptions } from '../options'
+import { NEST_LOGGING_OPTIONS, type NestLoggingOptions } from '../options'
 import { ErrorsEnum, ErrorsResponseEnum } from './base-errors.enum'
 import { ErrorSymbols } from './error-symbols'
 import { ResponseErrorInternalDto } from './response-error.dto'
