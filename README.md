@@ -21,16 +21,16 @@ TODO
 
 ## Exports
 
-| Export | Kind | Purpose |
-| --- | --- | --- |
-| `NestLoggingModule` | module | `forRoot({ alertReporting })`; provides + globally exports the guard |
-| `ThrowerErrorGuard<T>` | injectable | exception factory, generic over the enum union |
-| `LineLoggerSubservice` | class | logfmt `LoggerService` |
-| `ErrorFilter`, `HttpExceptionFilter` | filters | global exception handling |
-| `AppLoggerMiddleware` | middleware | request/response logging + log/response split |
-| `ErrorsEnum`, `ErrorsResponseEnum` | enums | shared base error codes + messages |
-| `toLogfmt`, `errorToLogfmt`, `escapeForLogfmt` | functions | logfmt helpers |
-| `HandleErrors`, `CatchDatabaseError`, `IHasThrowerErrorGuard` | decorators / type | error-handling decorators |
+| Export                                                        | Kind              | Purpose                                                              |
+|---------------------------------------------------------------|-------------------|----------------------------------------------------------------------|
+| `NestLoggingModule`                                           | module            | `forRoot({ alertReporting })`; provides + globally exports the guard |
+| `ThrowerErrorGuard<T>`                                        | injectable        | exception factory, generic over the enum union                       |
+| `LineLoggerSubservice`                                        | class             | logfmt `LoggerService`                                               |
+| `ErrorFilter`, `HttpExceptionFilter`                          | filters           | global exception handling                                            |
+| `AppLoggerMiddleware`                                         | middleware        | request/response logging + log/response split                        |
+| `ErrorsEnum`, `ErrorsResponseEnum`                            | enums             | shared base error codes + messages                                   |
+| `toLogfmt`, `errorToLogfmt`, `escapeForLogfmt`                | functions         | logfmt helpers                                                       |
+| `HandleErrors`, `CatchDatabaseError`, `IHasThrowerErrorGuard` | decorators / type | error-handling decorators                                            |
 
 ## Developing and running tests
 
