@@ -4,6 +4,8 @@
 
 <h1 align="center">log-nest</h1>
 
+<p align="center"><i>/lɒx nɛs/</i></p>
+
 [![npm](https://img.shields.io/npm/v/@bratislava/log-nest)](https://www.npmjs.com/package/@bratislava/log-nest)
 
 Shared NestJS logging and error-handling infrastructure. Made to be used by the
