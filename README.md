@@ -214,7 +214,12 @@ Two details worth knowing:
 
 ### Request logging: `AppLoggerMiddleware`
 
-Registered in [Quick start](#quick-start), the middleware emits one logfmt line per handled request, containing
+The middleware is a **mandatory** part of the setup, not an optional logging add-on. The exception filters deliberately
+never send a response themselves. The middleware's send-hook is what strips the log-only metadata from the error body.
+On a route without the middleware, an error therefore produces no response at all and the client waits until timeout.
+Register it on every route, as shown in [Quick start](#quick-start).
+
+The middleware emits one logfmt line per handled request, containing
 `method`, `originalUrl`, `statusCode`, `responseTime` (ms), `userAgent`, `ip`, `userId`, the JSON-serialized
 `request-body`, and the `response-data`. The line's severity is what makes alerting work:
 
@@ -228,12 +233,12 @@ Registered in [Quick start](#quick-start), the middleware emits one logfmt line 
 `message`) while the log-only metadata (`alert`, `console`, cause chain, stack) ends up on the log line. This is how
 `console` and `error` from [`ThrowerErrorGuard`](#throwing-errors-throwererrorguard) stay log-only.
 
-Two warnings:
+> [!WARNING]
+> The **entire request body is logged verbatim**. Until redacting/allowlist filtering lands in this package, do not
+> send secrets or sensitive personal data to endpoints logged by this middleware.
 
-- `userId` is best-effort: the JWT payload from the `Authorization` header is decoded **without signature
-  verification**, purely for log correlation. Never treat it as authenticated.
-- The **entire request body is logged verbatim**. Until redacting/allowlist filtering lands in this package, do not
-  send secrets or sensitive personal data to endpoints logged by this middleware, or exclude those routes from it.
+Also note that `userId` is best-effort: the JWT payload from the `Authorization` header is decoded **without signature
+verification**, purely for log correlation. Never treat it as authenticated.
 
 ### Decorators
 
