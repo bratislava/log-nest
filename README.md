@@ -11,6 +11,24 @@
 Shared NestJS logging and error-handling infrastructure. Made to be used by the
 NestJS applications of the city of [Bratislava](https://github.com/bratislava).
 
+## Motivation
+
+Our backends log to [Grafana Loki](https://grafana.com/oss/loki/), and multi-line output (stack traces, pretty-printed
+JSON) breaks up into separate, unrelated log entries there. So the core rule of this package is: **one event = one
+line** of space-separated `key="value"` pairs ([logfmt](https://brandur.org/logfmt)), which Loki parses into queryable
+labels.
+
+Everything else follows from that:
+
+- `LineLoggerSubservice` formats every log call, including stack traces, as a single logfmt line.
+- `ThrowerErrorGuard` builds exceptions that carry structured metadata: a machine-readable `errorName` for querying,
+  an `alert` flag for Grafana alerting, and log-only context the client must never see.
+- The exception filters and `AppLoggerMiddleware` cooperate to split each error into its two audiences: the sanitized
+  JSON response goes to the client, while the full picture (cause chain, `console` context, stack) goes to the log.
+- Code running outside the request-handling chain (cron jobs, startup tasks, event handlers) is covered too: the
+  `@HandleErrors` decorator logs errors the exception filters would never see, and registering `LineLoggerSubservice`
+  as the NestJS logger keeps the framework's own output logfmt as well.
+
 ## Installation
 
 `npm i @bratislava/log-nest`
