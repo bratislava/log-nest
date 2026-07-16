@@ -48,6 +48,11 @@
     "express": "^5.0.0",
     "reflect-metadata": "^0.2.0"
   },
+  "peerDependenciesMeta": {
+    "axios": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@bratislava/eslint-config-nest": "0.15.0",
     "@nestjs/common": "11.1.24",
