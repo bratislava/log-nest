@@ -285,7 +285,15 @@ export class FormRepository implements IHasThrowerErrorGuard {
 
 ## Developing and running tests
 
-TODO
+Requires node 24 (see `engines` in `package.json`; [volta](https://volta.sh/) picks it up automatically). Then:
+
+```sh
+npm ci             # install dependencies
+npm run build      # compile to dist/ (tsconfig.build.json)
+npm run typecheck  # tsc --noEmit
+npm run lint       # eslint (lint:fix to autofix, format for prettier)
+npm test           # jest (test:watch for watch mode)
+```
 
 ## License
 
