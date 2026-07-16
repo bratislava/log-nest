@@ -1,4 +1,4 @@
-import { Injectable, NestMiddleware } from '@nestjs/common'
+import { HttpStatus, Injectable, NestMiddleware } from '@nestjs/common'
 import { NextFunction, Request, Response } from 'express'
 
 import { LineLoggerSubservice } from '../logging/line-logger.subservice'
@@ -37,9 +37,12 @@ export class AppLoggerMiddleware implements NestMiddleware {
         'response-data': responseData,
         ...logData,
       }
-      if (response.statusCode >= 500 || logObj.alert === 1) {
+      if (
+        response.statusCode >= HttpStatus.INTERNAL_SERVER_ERROR ||
+        logObj.alert === 1
+      ) {
         logger.error(logObj)
-      } else if (response.statusCode >= 400) {
+      } else if (response.statusCode >= HttpStatus.BAD_REQUEST) {
         logger.warn(logObj)
       } else {
         logger.log(logObj)

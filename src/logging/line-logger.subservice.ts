@@ -33,7 +33,9 @@ export class LineLoggerSubservice implements LoggerService {
   }
 
   private formatStringMessage(messages: string): string {
-    if (messages.length === 0) return ''
+    if (messages.length === 0) {
+      return ''
+    }
     return isLogfmt(messages)
       ? messages
       : `message="${escapeForLogfmt(messages)}"`

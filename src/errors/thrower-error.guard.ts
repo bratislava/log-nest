@@ -180,7 +180,7 @@ export class ThrowerErrorGuard<TErrorEnum extends string = string> {
     // keyed by numeric HTTP status from the downstream response, not a user-supplied property name
     const override =
       // eslint-disable-next-line security/detect-object-injection
-      status !== undefined ? statusOverrides?.[status] : undefined
+      status === undefined ? undefined : statusOverrides?.[status]
 
     if (override !== undefined) {
       const overrideStatus = override.status
