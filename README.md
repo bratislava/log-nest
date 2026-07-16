@@ -205,6 +205,36 @@ Strings already in logfmt shape pass through untouched; everything else is
 serialized with the logfmt helpers, which are also exported for direct use:
 `toLogfmt(value)`, `errorToLogfmt(error)`, and `escapeForLogfmt(string)`.
 
+Two details worth knowing:
+
+- The second constructor parameter disables ANSI colors: `new LineLoggerSubservice(context, false)`. By default every
+  line is wrapped in color escape codes.
+- When serializing an object, the `console` field is flattened: its sub-fields become top-level logfmt pairs on the
+  line, so name them as you want to query them in Loki.
+
+### Request logging: `AppLoggerMiddleware`
+
+Registered in [Quick start](#quick-start), the middleware emits one logfmt line per handled request, containing
+`method`, `originalUrl`, `statusCode`, `responseTime` (ms), `userAgent`, `ip`, `userId`, the JSON-serialized
+`request-body`, and the `response-data`. The line's severity is what makes alerting work:
+
+| Condition                       | Severity |
+|---------------------------------|----------|
+| `statusCode` ≥ 500 or `alert=1` | `error`  |
+| `statusCode` ≥ 400              | `warn`   |
+| otherwise                       | `log`    |
+
+**The log/response split.** On errors, the client gets the sanitized response (`statusCode`, `status`, `errorName`,
+`message`) while the log-only metadata (`alert`, `console`, cause chain, stack) ends up on the log line. This is how
+`console` and `error` from [`ThrowerErrorGuard`](#throwing-errors-throwererrorguard) stay log-only.
+
+Two warnings:
+
+- `userId` is best-effort: the JWT payload from the `Authorization` header is decoded **without signature
+  verification**, purely for log correlation. Never treat it as authenticated.
+- The **entire request body is logged verbatim**. Until redacting/allowlist filtering lands in this package, do not
+  send secrets or sensitive personal data to endpoints logged by this middleware, or exclude those routes from it.
+
 ### Decorators
 
 `@HandleErrors(loggerName?)` logs and swallows anything thrown by the method (resolves to `null`). Use it on entry
