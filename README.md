@@ -121,6 +121,8 @@ export class FormsService {
   produced log line carries `alert=1`.
 - `console` (a string or object) and the `error` cause are attached to the log entry only. The client never sees them.
   The cause's stack is chained onto the exception's stack.
+- `ErrorsResponseEnum` holds a default client-facing message for every base error code, so the common idiom is pairing
+  the two: `errorEnum: ErrorsEnum.NOT_FOUND_ERROR, message: ErrorsResponseEnum.NOT_FOUND_ERROR`.
 
 **App-specific error enums.** The guard is generic over the enum union, so extend the base `ErrorsEnum` with your own
 and keep type safety:
