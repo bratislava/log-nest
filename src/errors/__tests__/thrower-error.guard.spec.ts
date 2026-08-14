@@ -2,18 +2,18 @@ import { HttpStatus } from '@nestjs/common'
 import { AxiosError, AxiosHeaders, InternalAxiosRequestConfig } from 'axios'
 
 import { ErrorEnum, ErrorResponseEnum } from '../base-errors.enum'
-import { ErrorFactory } from '../error-factory.service'
+import { ErrorFactoryService } from '../error-factory.service'
 import { ErrorSymbols } from '../error-symbols'
 import { ResponseErrorInternalDto } from '../response-error.dto'
 
-describe('ErrorFactory', () => {
-  let errorFactory: ErrorFactory
+describe('ErrorFactoryService', () => {
+  let errorFactoryService: ErrorFactoryService
 
   beforeEach(() => {
     jest.resetAllMocks()
     // alertReporting is injected via NestLoggingModule.forRoot() in the app; here
-    // we construct the errorFactory directly with the list the alert assertions rely on.
-    errorFactory = new ErrorFactory({
+    // we construct the errorFactoryService directly with the list the alert assertions rely on.
+    errorFactoryService = new ErrorFactoryService({
       alertReporting: [
         ErrorEnum.DATABASE_ERROR,
         ErrorEnum.BAD_GATEWAY_AUTH_ERROR,
@@ -22,12 +22,12 @@ describe('ErrorFactory', () => {
   })
 
   it('should be defined', () => {
-    expect(errorFactory).toBeDefined()
+    expect(errorFactoryService).toBeDefined()
   })
 
   describe('alerting', () => {
     it('should alert', () => {
-      const result = errorFactory
+      const result = errorFactoryService
         .BadRequestException({
           errorEnum: ErrorEnum.DATABASE_ERROR,
           message: 'Some message',
@@ -38,7 +38,7 @@ describe('ErrorFactory', () => {
     })
 
     it('should not alert', () => {
-      const result = errorFactory
+      const result = errorFactoryService
         .BadRequestException({
           errorEnum: ErrorEnum.NOT_FOUND_ERROR,
           message: 'Some message',
@@ -91,7 +91,7 @@ describe('ErrorFactory', () => {
       it('maps the downstream status to override status/errorEnum/message', () => {
         const error = createMockAxiosError({ status: HttpStatus.NOT_FOUND })
 
-        const result = errorFactory.fromAxiosError(error, {
+        const result = errorFactoryService.fromAxiosError(error, {
           statusOverrides: {
             404: {
               status: HttpStatus.NOT_FOUND,
@@ -114,7 +114,7 @@ describe('ErrorFactory', () => {
           headers: { 'retry-after': '30' },
         })
 
-        const result = errorFactory.fromAxiosError(error, {
+        const result = errorFactoryService.fromAxiosError(error, {
           statusOverrides: {
             [HttpStatus.SERVICE_UNAVAILABLE]: {
               status: HttpStatus.BAD_REQUEST,
@@ -133,7 +133,7 @@ describe('ErrorFactory', () => {
       it('ignores options.errorEnumOverwrite and options.message on the override path', () => {
         const error = createMockAxiosError({ status: 500 })
 
-        const response = errorFactory
+        const response = errorFactoryService
           .fromAxiosError(error, {
             message: 'top-level message',
             errorEnumOverwrite: ErrorEnum.DATABASE_ERROR,
@@ -154,7 +154,7 @@ describe('ErrorFactory', () => {
       it('falls through when the downstream status does not match any override entry', () => {
         const error = createMockAxiosError({ status: 500 })
 
-        const result = errorFactory.fromAxiosError(error, {
+        const result = errorFactoryService.fromAxiosError(error, {
           statusOverrides: {
             404: {
               status: HttpStatus.NOT_FOUND,
@@ -172,7 +172,7 @@ describe('ErrorFactory', () => {
       it('falls back to options.message for status text when STATUS_CODES has no entry', () => {
         const error = createMockAxiosError({ status: 599 })
 
-        const response = errorFactory
+        const response = errorFactoryService
           .fromAxiosError(error, {
             message: 'fallback status text',
             statusOverrides: {
@@ -197,7 +197,7 @@ describe('ErrorFactory', () => {
           headers: { 'retry-after': '30' },
         })
 
-        const result = errorFactory.fromAxiosError(error, {})
+        const result = errorFactoryService.fromAxiosError(error, {})
 
         expect(result.getStatus()).toBe(HttpStatus.SERVICE_UNAVAILABLE)
         const response = result.getResponse() as ResponseErrorInternalDto
@@ -213,7 +213,7 @@ describe('ErrorFactory', () => {
           status: HttpStatus.SERVICE_UNAVAILABLE,
         })
 
-        const result = errorFactory.fromAxiosError(error, {})
+        const result = errorFactoryService.fromAxiosError(error, {})
 
         expect(result.getStatus()).toBe(HttpStatus.BAD_GATEWAY)
         const response = result.getResponse() as ResponseErrorInternalDto
@@ -230,7 +230,7 @@ describe('ErrorFactory', () => {
         (_, status) => {
           const error = createMockAxiosError({ status })
 
-          const result = errorFactory.fromAxiosError(error, {})
+          const result = errorFactoryService.fromAxiosError(error, {})
 
           expect(result.getStatus()).toBe(HttpStatus.BAD_GATEWAY)
           const response = result.getResponse() as ResponseErrorInternalDto
@@ -247,7 +247,7 @@ describe('ErrorFactory', () => {
       it('maps an unhandled downstream status to BadGateway with BAD_GATEWAY_ERROR', () => {
         const error = createMockAxiosError({ status: 500 })
 
-        const result = errorFactory.fromAxiosError(error, {})
+        const result = errorFactoryService.fromAxiosError(error, {})
 
         expect(result.getStatus()).toBe(HttpStatus.BAD_GATEWAY)
         const response = result.getResponse() as ResponseErrorInternalDto
@@ -259,7 +259,7 @@ describe('ErrorFactory', () => {
       it('handles a network error (no response on the AxiosError)', () => {
         const error = createMockAxiosError()
 
-        const result = errorFactory.fromAxiosError(error, {})
+        const result = errorFactoryService.fromAxiosError(error, {})
 
         expect(result.getStatus()).toBe(HttpStatus.BAD_GATEWAY)
         const response = result.getResponse() as ResponseErrorInternalDto
@@ -269,7 +269,7 @@ describe('ErrorFactory', () => {
       it('honours errorEnumOverwrite and options.message', () => {
         const error = createMockAxiosError({ status: 500 })
 
-        const response = errorFactory
+        const response = errorFactoryService
           .fromAxiosError(error, {
             errorEnumOverwrite: ErrorEnum.DATABASE_ERROR,
             message: 'something else',

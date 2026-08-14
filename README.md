@@ -21,7 +21,8 @@ labels.
 Everything else follows from that:
 
 - `LineLoggerSubservice` formats every log call, including stack traces, as a single logfmt line.
-- `ErrorFactory` builds exceptions that carry structured metadata: a machine-readable `errorName` for querying, an
+- `ErrorFactoryService` builds exceptions that carry structured metadata: a machine-readable `errorName` for querying,
+  an
   `alert` flag for Grafana alerting, and log-only context the client must never see.
 - The exception filters and `AppLoggerMiddleware` cooperate to split each error into its two audiences: the sanitized
   JSON response goes to the client, while the full picture (cause chain, `console` context, stack) goes to the log.
@@ -91,22 +92,22 @@ await app.listen(3000)
 
 That's the whole setup. See [Motivation](#motivation) for how the pieces cooperate.
 
-### Throwing errors: `ErrorFactory`
+### Throwing errors: `ErrorFactoryService`
 
-`NestLoggingModule` provides and globally exports `ErrorFactory`, so it can be injected anywhere without re-importing.
-Each factory method takes an `options` object and *returns* an `HttpException`.
+`NestLoggingModule` provides and globally exports `ErrorFactoryService`, so it can be injected anywhere without
+re-importing. Each factory method takes an `options` object and *returns* an `HttpException`.
 
 ```ts
 
 @Injectable()
 export class FormsService {
-  constructor(private readonly errorFactory: ErrorFactory) {
+  constructor(private readonly errorFactoryService: ErrorFactoryService) {
   }
 
   async getForm(id: string): Promise<Form> {
     const form = await this.repository.find(id)
     if (!form) {
-      throw this.errorFactory.NotFoundException({
+      throw this.errorFactoryService.NotFoundException({
         errorEnum: ErrorEnum.NOT_FOUND_ERROR,
         message: 'Form not found.', // sent to the client
         console: { formId: id },    // logged only, stripped from the response
@@ -124,8 +125,8 @@ export class FormsService {
 - `ErrorResponseEnum` holds a default client-facing message for every base error code, so the common idiom is pairing
   the two: `errorEnum: ErrorEnum.NOT_FOUND_ERROR, message: ErrorResponseEnum.NOT_FOUND_ERROR`.
 
-**App-specific error enums.** The error factory is generic over the enum union, so extend the base `ErrorEnum` with your
-own and keep type safety:
+**App-specific error enums.** The error factory service is generic over the enum union, so extend the base `ErrorEnum`
+with your own and keep type safety:
 
 ```ts
 enum UserErrorsEnum {
@@ -137,13 +138,13 @@ type AppErrorEnums = ErrorEnum | UserErrorsEnum
 @Injectable()
 export class UserService {
   constructor(
-    private readonly errorFactory: ErrorFactory<AppErrorEnums>,
+    private readonly errorFactoryService: ErrorFactoryService<AppErrorEnums>,
   ) {
   }
 
   verify(user: User): void {
     if (!user.verified) {
-      throw this.errorFactory.ForbiddenException({
+      throw this.errorFactoryService.ForbiddenException({
         errorEnum: UserErrorsEnum.USER_NOT_VERIFIED,
         message: 'User is not verified.',
       })
@@ -166,7 +167,7 @@ try {
   await axios.get(`${host}/documents/${id}`)
 } catch (error) {
   if (isAxiosError(error)) {
-    throw this.errorFactory.fromAxiosError(error, {
+    throw this.errorFactoryService.fromAxiosError(error, {
       message: 'Document service request failed.',
       console: { documentId: id },
       statusOverrides: {
@@ -232,7 +233,7 @@ The middleware emits one logfmt line per handled request, containing
 
 **The log/response split.** On errors, the client gets the sanitized response (`statusCode`, `status`, `errorName`,
 `message`) while the log-only metadata (`alert`, `console`, cause chain, stack) ends up on the log line. This is how
-`console` and `error` from [`ErrorFactory`](#throwing-errors-errorfactory) stay log-only.
+`console` and `error` from [`ErrorFactoryService`](#throwing-errors-errorfactoryservice) stay log-only.
 
 > [!WARNING]
 > The **entire request body is logged verbatim**. Until redacting/allowlist filtering lands in this package, do not
@@ -260,14 +261,15 @@ export class PaymentCronService {
 ```
 
 `@CatchDatabaseError()` remaps anything thrown by the method into an `UnprocessableEntityException` with
-`ErrorEnum.DATABASE_ERROR`, keeping the original error as the logged cause. The class must expose the error factory as
-`errorFactory` (enforced by the `IHasErrorFactory` interface):
+`ErrorEnum.DATABASE_ERROR`, keeping the original error as the logged cause. The class must expose the error factory
+service as
+`errorFactoryService` (enforced by the `IHasErrorFactoryService` interface):
 
 ```ts
 
 @Injectable()
-export class FormRepository implements IHasErrorFactory {
-  constructor(public readonly errorFactory: ErrorFactory) {
+export class FormRepository implements IHasErrorFactoryService {
+  constructor(public readonly errorFactoryService: ErrorFactoryService) {
   }
 
   @CatchDatabaseError()
@@ -279,16 +281,16 @@ export class FormRepository implements IHasErrorFactory {
 
 ## Exports
 
-| Export                                                   | Kind              | Purpose                                                                      |
-|----------------------------------------------------------|-------------------|------------------------------------------------------------------------------|
-| `NestLoggingModule`                                      | module            | `forRoot({ alertReporting })`; provides + globally exports the error factory |
-| `ErrorFactory<T>`                                        | injectable        | exception factory, generic over the enum union                               |
-| `LineLoggerSubservice`                                   | class             | logfmt `LoggerService`                                                       |
-| `ErrorFilter`, `HttpExceptionFilter`                     | filters           | global exception handling                                                    |
-| `AppLoggerMiddleware`                                    | middleware        | request/response logging + log/response split                                |
-| `ErrorEnum`, `ErrorResponseEnum`                         | enums             | shared base error codes + messages                                           |
-| `toLogfmt`, `errorToLogfmt`, `escapeForLogfmt`           | functions         | logfmt helpers                                                               |
-| `HandleErrors`, `CatchDatabaseError`, `IHasErrorFactory` | decorators / type | error-handling decorators                                                    |
+| Export                                                          | Kind              | Purpose                                                                              |
+|-----------------------------------------------------------------|-------------------|--------------------------------------------------------------------------------------|
+| `NestLoggingModule`                                             | module            | `forRoot({ alertReporting })`; provides + globally exports the error factory service |
+| `ErrorFactoryService<T>`                                        | injectable        | exception factory, generic over the enum union                                       |
+| `LineLoggerSubservice`                                          | class             | logfmt `LoggerService`                                                               |
+| `ErrorFilter`, `HttpExceptionFilter`                            | filters           | global exception handling                                                            |
+| `AppLoggerMiddleware`                                           | middleware        | request/response logging + log/response split                                        |
+| `ErrorEnum`, `ErrorResponseEnum`                                | enums             | shared base error codes + messages                                                   |
+| `toLogfmt`, `errorToLogfmt`, `escapeForLogfmt`                  | functions         | logfmt helpers                                                                       |
+| `HandleErrors`, `CatchDatabaseError`, `IHasErrorFactoryService` | decorators / type | error-handling decorators                                                            |
 
 ## Developing and running tests
 

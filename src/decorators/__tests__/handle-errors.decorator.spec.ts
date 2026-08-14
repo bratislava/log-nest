@@ -1,5 +1,5 @@
 import { ErrorEnum } from '../../errors/base-errors.enum'
-import { ErrorFactory } from '../../errors/error-factory.service'
+import { ErrorFactoryService } from '../../errors/error-factory.service'
 import { HandleErrors } from '../handle-errors.decorator'
 
 describe('HandleErrors', () => {
@@ -35,14 +35,14 @@ describe('HandleErrors', () => {
 
   it('should catch and handle HttpExceptions', async () => {
     class TestClass {
-      private errorFactory = new ErrorFactory({
+      private errorFactoryService = new ErrorFactoryService({
         alertReporting: [ErrorEnum.INTERNAL_SERVER_ERROR],
       })
 
       @HandleErrors('Test error handler')
       async testMethod(): Promise<void> {
         return Promise.reject(
-          this.errorFactory.BadRequestException({
+          this.errorFactoryService.BadRequestException({
             errorEnum: ErrorEnum.INTERNAL_SERVER_ERROR,
             message: 'Error message',
             console: 'Console error',

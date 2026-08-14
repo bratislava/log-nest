@@ -7,7 +7,7 @@ export { errorToLogfmt, escapeForLogfmt, toLogfmt } from './logging/logfmt'
 
 // Errors
 export { ErrorEnum, ErrorResponseEnum } from './errors/base-errors.enum'
-export { ErrorFactory } from './errors/error-factory.service'
+export { ErrorFactoryService } from './errors/error-factory.service'
 
 // Filters
 export { ErrorFilter, HttpExceptionFilter } from './filters/error.filter'
@@ -18,6 +18,6 @@ export { AppLoggerMiddleware } from './middlewares/logger.middleware'
 // Decorators
 export {
   CatchDatabaseError,
-  type IHasErrorFactory,
+  type IHasErrorFactoryService,
 } from './decorators/catch-database-error.decorator'
 export { HandleErrors } from './decorators/handle-errors.decorator'

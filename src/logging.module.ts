@@ -1,6 +1,6 @@
 import { DynamicModule, Global, Module } from '@nestjs/common'
 
-import { ErrorFactory } from './errors/error-factory.service'
+import { ErrorFactoryService } from './errors/error-factory.service'
 import { NEST_LOGGING_OPTIONS, NestLoggingOptions } from './options'
 
 /**
@@ -13,7 +13,7 @@ import { NEST_LOGGING_OPTIONS, NestLoggingOptions } from './options'
  * ```
  *
  * `alertReporting` is the app-specific list of error-enum values that should
- * raise a Grafana alert. {@link ErrorFactory} is provided and exported
+ * raise a Grafana alert. {@link ErrorFactoryService} is provided and exported
  * globally, so any module can inject it without re-importing.
  */
 @Global()
@@ -24,9 +24,9 @@ export class NestLoggingModule {
       module: NestLoggingModule,
       providers: [
         { provide: NEST_LOGGING_OPTIONS, useValue: options },
-        ErrorFactory,
+        ErrorFactoryService,
       ],
-      exports: [ErrorFactory],
+      exports: [ErrorFactoryService],
     }
   }
 }

@@ -16,7 +16,7 @@ import { ResponseErrorInternalDto } from './response-error.dto'
 import { FromAxiosErrorOptions } from './status-override'
 
 /**
- * Arguments for the per-status factory methods of {@link ErrorFactory}.
+ * Arguments for the per-status factory methods of {@link ErrorFactoryService}.
  *
  * @property errorEnum stored as `errorName` on the produced exception. Drives
  *        alerting via the injected `alertReporting` list.
@@ -36,7 +36,7 @@ export interface LoggingExceptionOptions<TErrorEnum extends string = string> {
 // Provided dynamically via NestLoggingModule.forRoot(), which the static plugin can't detect.
 @Injectable()
 // eslint-disable-next-line @darraghor/nestjs-typed/injectable-should-be-provided
-export class ErrorFactory<TErrorEnum extends string = string> {
+export class ErrorFactoryService<TErrorEnum extends string = string> {
   private readonly alertReporting: readonly string[]
 
   constructor(
@@ -44,7 +44,7 @@ export class ErrorFactory<TErrorEnum extends string = string> {
     @Inject(NEST_LOGGING_OPTIONS)
     options?: NestLoggingOptions,
   ) {
-    // Optional so the error factory can be constructed in tests / `new ErrorFactory()`
+    // Optional so the error factory service can be constructed in tests / `new ErrorFactoryService()`
     // without NestLoggingModule.forRoot(). Without options no error alerts (empty list).
     this.alertReporting = options?.alertReporting ?? []
   }
