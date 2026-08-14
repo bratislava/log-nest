@@ -207,6 +207,25 @@ Strings already in logfmt shape pass through untouched; everything else is seria
 also exported for direct use:
 `toLogfmt(value)`, `errorToLogfmt(error)`, and `escapeForLogfmt(string)`.
 
+**Auto-named via DI.** Instead of passing `ClassName.name` yourself, inject `LineLoggerSubservice` as a constructor
+dependency of any `@Injectable()` class and it derives its context from that class automatically:
+
+```ts
+@Injectable()
+export class FormsService {
+  constructor(private readonly logger: LineLoggerSubservice) {
+  }
+
+  create(form: Form): void {
+    this.logger.log('Form created', {formId: form.id}) // context="FormsService"
+  }
+}
+```
+
+This only works when Nest constructs the class through its own DI container — a class built manually via a custom
+`useFactory` provider won't get a meaningful context this way, so keep using `new LineLoggerSubservice(ClassName.name)`
+there.
+
 Two details worth knowing:
 
 - The second constructor parameter disables ANSI colors: `new LineLoggerSubservice(context, false)`. By default every
