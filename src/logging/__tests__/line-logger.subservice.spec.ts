@@ -1,20 +1,28 @@
 import { LineLoggerSubservice } from '../line-logger.subservice'
 
 describe('LineLoggerService', () => {
-  let service: any
+  let service: LineLoggerSubservice
   let consoleSpy: jest.SpyInstance
 
   beforeEach(() => {
     service = new LineLoggerSubservice('LineLogger TEST')
     consoleSpy = jest.spyOn(console, 'log')
-    consoleSpy.mockImplementation(() => {})
+    consoleSpy.mockImplementation(jest.fn())
   })
 
   afterEach(() => {
     consoleSpy.mockRestore()
   })
 
-  test.each([
+  test.each<
+    [
+      keyof Pick<
+        LineLoggerSubservice,
+        'log' | 'error' | 'warn' | 'debug' | 'verbose' | 'fatal'
+      >,
+      string,
+    ]
+  >([
     ['log', 'LOG'],
     ['error', 'ERROR'],
     ['warn', 'WARN'],
@@ -24,6 +32,7 @@ describe('LineLoggerService', () => {
   ])('should print %s message with severity %s', (method, severity) => {
     service[method]('test message')
 
+    // eslint-disable-next-line security/detect-non-literal-regexp
     const regex = new RegExp(
       `process="\\[Nest]" processPID="\\d+" datetime="\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.\\d{3}Z" severity="${severity}" context="LineLogger TEST" message="test message"`,
     )
