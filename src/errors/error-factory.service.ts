@@ -44,7 +44,7 @@ export class ErrorFactory<TErrorEnum extends string = string> {
     @Inject(NEST_LOGGING_OPTIONS)
     options?: NestLoggingOptions,
   ) {
-    // Optional so the guard can be constructed in tests / `new ErrorFactory()`
+    // Optional so the error factory can be constructed in tests / `new ErrorFactory()`
     // without NestLoggingModule.forRoot(). Without options no error alerts (empty list).
     this.alertReporting = options?.alertReporting ?? []
   }

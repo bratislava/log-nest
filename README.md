@@ -21,8 +21,8 @@ labels.
 Everything else follows from that:
 
 - `LineLoggerSubservice` formats every log call, including stack traces, as a single logfmt line.
-- `ErrorFactory` builds exceptions that carry structured metadata: a machine-readable `errorName` for querying,
-  an `alert` flag for Grafana alerting, and log-only context the client must never see.
+- `ErrorFactory` builds exceptions that carry structured metadata: a machine-readable `errorName` for querying, an
+  `alert` flag for Grafana alerting, and log-only context the client must never see.
 - The exception filters and `AppLoggerMiddleware` cooperate to split each error into its two audiences: the sanitized
   JSON response goes to the client, while the full picture (cause chain, `console` context, stack) goes to the log.
 - Code running outside the request-handling chain (cron jobs, startup tasks, event handlers) is covered too: the
@@ -43,7 +43,7 @@ separate file, it doubles as the app's single overview of which errors alert:
 
 ```ts
 // alert-reporting.ts
-import {ErrorEnum} from '@bratislava/log-nest'
+import { ErrorEnum } from '@bratislava/log-nest'
 
 export const alertReporting: readonly string[] = [
   ErrorEnum.BAD_GATEWAY_AUTH_ERROR,
@@ -54,13 +54,13 @@ export const alertReporting: readonly string[] = [
 
 ```ts
 // app.module.ts
-import {MiddlewareConsumer, Module, NestModule} from '@nestjs/common'
-import {AppLoggerMiddleware, NestLoggingModule} from '@bratislava/log-nest'
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common'
+import { AppLoggerMiddleware, NestLoggingModule } from '@bratislava/log-nest'
 
-import {alertReporting} from './alert-reporting'
+import { alertReporting } from './alert-reporting'
 
 @Module({
-  imports: [NestLoggingModule.forRoot({alertReporting})],
+  imports: [NestLoggingModule.forRoot({ alertReporting })],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
@@ -73,7 +73,7 @@ Then wire the logger and the global exception filters in `main.ts`:
 
 ```ts
 // main.ts
-import {NestFactory} from '@nestjs/core'
+import { NestFactory } from '@nestjs/core'
 import {
   ErrorFilter,
   HttpExceptionFilter,
@@ -93,8 +93,8 @@ That's the whole setup. See [Motivation](#motivation) for how the pieces coopera
 
 ### Throwing errors: `ErrorFactory`
 
-`NestLoggingModule` provides and globally exports `ErrorFactory`, so it can be injected anywhere without
-re-importing. Each factory method takes an `options` object and *returns* an `HttpException`.
+`NestLoggingModule` provides and globally exports `ErrorFactory`, so it can be injected anywhere without re-importing.
+Each factory method takes an `options` object and *returns* an `HttpException`.
 
 ```ts
 
@@ -109,7 +109,7 @@ export class FormsService {
       throw this.errorFactory.NotFoundException({
         errorEnum: ErrorEnum.NOT_FOUND_ERROR,
         message: 'Form not found.', // sent to the client
-        console: {formId: id},    // logged only, stripped from the response
+        console: { formId: id },    // logged only, stripped from the response
       })
     }
     return form
@@ -124,8 +124,8 @@ export class FormsService {
 - `ErrorResponseEnum` holds a default client-facing message for every base error code, so the common idiom is pairing
   the two: `errorEnum: ErrorEnum.NOT_FOUND_ERROR, message: ErrorResponseEnum.NOT_FOUND_ERROR`.
 
-**App-specific error enums.** The guard is generic over the enum union, so extend the base `ErrorEnum` with your own
-and keep type safety:
+**App-specific error enums.** The error factory is generic over the enum union, so extend the base `ErrorEnum` with your
+own and keep type safety:
 
 ```ts
 enum UserErrorsEnum {
@@ -168,7 +168,7 @@ try {
   if (isAxiosError(error)) {
     throw this.errorFactory.fromAxiosError(error, {
       message: 'Document service request failed.',
-      console: {documentId: id},
+      console: { documentId: id },
       statusOverrides: {
         // downstream 404 -> our 404 instead of the default 502
         404: {
@@ -195,15 +195,15 @@ export class FormsService {
   private readonly logger = new LineLoggerSubservice(FormsService.name)
 
   create(form: Form): void {
-    this.logger.log('Form created', {formId: form.id, slug: form.slug})
+    this.logger.log('Form created', { formId: form.id, slug: form.slug })
     // process="[Nest]" processPID="42" datetime="…" severity="LOG" 
     // context="FormsService" message="Form created" formId="…" slug="…"
   }
 }
 ```
 
-Strings already in logfmt shape pass through untouched; everything else is
-serialized with the logfmt helpers, which are also exported for direct use:
+Strings already in logfmt shape pass through untouched; everything else is serialized with the logfmt helpers, which are
+also exported for direct use:
 `toLogfmt(value)`, `errorToLogfmt(error)`, and `escapeForLogfmt(string)`.
 
 Two details worth knowing:
@@ -260,10 +260,11 @@ export class PaymentCronService {
 ```
 
 `@CatchDatabaseError()` remaps anything thrown by the method into an `UnprocessableEntityException` with
-`ErrorEnum.DATABASE_ERROR`, keeping the original error as the logged cause. The class must expose the guard as
+`ErrorEnum.DATABASE_ERROR`, keeping the original error as the logged cause. The class must expose the error factory as
 `errorFactory` (enforced by the `IHasErrorFactory` interface):
 
 ```ts
+
 @Injectable()
 export class FormRepository implements IHasErrorFactory {
   constructor(public readonly errorFactory: ErrorFactory) {
@@ -271,23 +272,23 @@ export class FormRepository implements IHasErrorFactory {
 
   @CatchDatabaseError()
   async findForm(id: string): Promise<Form> {
-    return this.prisma.form.findUniqueOrThrow({where: {id}})
+    return this.prisma.form.findUniqueOrThrow({ where: { id } })
   }
 }
 ```
 
 ## Exports
 
-| Export                                                        | Kind              | Purpose                                                              |
-|---------------------------------------------------------------|-------------------|----------------------------------------------------------------------|
-| `NestLoggingModule`                                           | module            | `forRoot({ alertReporting })`; provides + globally exports the guard |
-| `ErrorFactory<T>`                                        | injectable        | exception factory, generic over the enum union                       |
-| `LineLoggerSubservice`                                        | class             | logfmt `LoggerService`                                               |
-| `ErrorFilter`, `HttpExceptionFilter`                          | filters           | global exception handling                                            |
-| `AppLoggerMiddleware`                                         | middleware        | request/response logging + log/response split                        |
-| `ErrorEnum`, `ErrorResponseEnum`                            | enums             | shared base error codes + messages                                   |
-| `toLogfmt`, `errorToLogfmt`, `escapeForLogfmt`                | functions         | logfmt helpers                                                       |
-| `HandleErrors`, `CatchDatabaseError`, `IHasErrorFactory` | decorators / type | error-handling decorators                                            |
+| Export                                                   | Kind              | Purpose                                                                      |
+|----------------------------------------------------------|-------------------|------------------------------------------------------------------------------|
+| `NestLoggingModule`                                      | module            | `forRoot({ alertReporting })`; provides + globally exports the error factory |
+| `ErrorFactory<T>`                                        | injectable        | exception factory, generic over the enum union                               |
+| `LineLoggerSubservice`                                   | class             | logfmt `LoggerService`                                                       |
+| `ErrorFilter`, `HttpExceptionFilter`                     | filters           | global exception handling                                                    |
+| `AppLoggerMiddleware`                                    | middleware        | request/response logging + log/response split                                |
+| `ErrorEnum`, `ErrorResponseEnum`                         | enums             | shared base error codes + messages                                           |
+| `toLogfmt`, `errorToLogfmt`, `escapeForLogfmt`           | functions         | logfmt helpers                                                               |
+| `HandleErrors`, `CatchDatabaseError`, `IHasErrorFactory` | decorators / type | error-handling decorators                                                    |
 
 ## Developing and running tests
 

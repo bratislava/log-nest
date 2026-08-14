@@ -9,7 +9,7 @@ function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
   )
 }
 
-/** Classes using {@link CatchDatabaseError} must expose the guard under this name. */
+/** Classes using {@link CatchDatabaseError} must expose the error factory under this name. */
 export interface IHasErrorFactory {
   errorFactory: ErrorFactory
 }
