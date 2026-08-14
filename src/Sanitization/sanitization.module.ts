@@ -1,6 +1,6 @@
 import { DynamicModule, Global, Module } from '@nestjs/common'
 
-import { ThrowerErrorGuard } from '../errors/thrower-error.guard'
+import { ErrorFactoryService } from '../errors/error-factory.service'
 import { RedactionService } from './redaction.service'
 import { Redactor } from './redaction.types'
 
@@ -28,12 +28,12 @@ export class SanitizationModule {
       providers: [
         {
           provide: RedactionService,
-          useFactory: (throwerErrorGuard: ThrowerErrorGuard) => {
-            const redactionService = new RedactionService(throwerErrorGuard)
+          useFactory: (errorFactoryService: ErrorFactoryService) => {
+            const redactionService = new RedactionService(errorFactoryService)
             redactionService.registerGlobal(...redactors)
             return redactionService
           },
-          inject: [ThrowerErrorGuard],
+          inject: [ErrorFactoryService],
         },
       ],
       exports: [RedactionService],

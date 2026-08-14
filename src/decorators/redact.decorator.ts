@@ -41,7 +41,10 @@ export function Redact(...redactorNames: string[]): MethodDecorator {
         const metadata: SanitizeMetadata = { redactorNames }
         return Object.assign(result, { [NEST_LOGGING_OPTIONS]: metadata })
       }
-      const metadata: SanitizeMetadata = { valueIsNotObject: true, redactorNames }
+      const metadata: SanitizeMetadata = {
+        valueIsNotObject: true,
+        redactorNames,
+      }
       return {
         value: result,
         [NEST_LOGGING_OPTIONS]: metadata,
