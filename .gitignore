@@ -2,17 +2,8 @@
 /dist
 /node_modules
 
-# Logs
-logs
-*.log
-npm-debug.log*
-
 # OS
 .DS_Store
-
-# Tests
-/coverage
-/.nyc_output
 
 # IDEs and editors
 /.idea
@@ -22,9 +13,5 @@ npm-debug.log*
 
 # IDE - VSCode
 .vscode/*
-!.vscode/settings.json
-!.vscode/launch.json
-!.vscode/extensions.json
 
-*.tsbuildinfo
 .env
