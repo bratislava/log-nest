@@ -179,6 +179,7 @@ try {
       },
     })
   }
+  // handle other error types here
   throw error
 }
 ```
