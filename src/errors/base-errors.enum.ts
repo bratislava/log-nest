@@ -40,6 +40,8 @@ export enum ErrorEnum {
   // Package-specific (not 1:1 with an HTTP status)
   DATABASE_ERROR = 'DATABASE_ERROR',
   BAD_GATEWAY_AUTH_ERROR = 'BAD_GATEWAY_AUTH_ERROR',
+  DUPLICATE_REDACTOR_ERROR = 'DUPLICATE_REDACTOR_ERROR',
+  UNREGISTERED_REDACTOR_ERROR = 'UNREGISTERED_REDACTOR_ERROR',
 }
 
 export enum ErrorResponseEnum {
@@ -84,4 +86,6 @@ export enum ErrorResponseEnum {
   // Package-specific (not 1:1 with an HTTP status)
   DATABASE_ERROR = 'There was database error.',
   BAD_GATEWAY_AUTH_ERROR = 'Bad gateway: downstream rejected our credentials.',
+  DUPLICATE_REDACTOR_ERROR = 'Two redactors were registered under the same name.',
+  UNREGISTERED_REDACTOR_ERROR = 'A redactor name was requested but never registered.',
 }
