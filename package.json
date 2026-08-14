@@ -44,6 +44,7 @@
   "license": "EUPL-1.2",
   "peerDependencies": {
     "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
     "axios": "^1.0.0",
     "express": "^5.0.0",
     "reflect-metadata": "^0.2.0"
