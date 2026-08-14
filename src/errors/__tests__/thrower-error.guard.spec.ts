@@ -2,9 +2,9 @@ import { HttpStatus } from '@nestjs/common'
 import { AxiosError, AxiosHeaders, InternalAxiosRequestConfig } from 'axios'
 
 import { ErrorEnum, ErrorResponseEnum } from '../base-errors.enum'
+import { ErrorFactory } from '../error-factory.service'
 import { ErrorSymbols } from '../error-symbols'
 import { ResponseErrorInternalDto } from '../response-error.dto'
-import { ErrorFactory } from '../error-factory.service'
 
 describe('ErrorFactory', () => {
   let guard: ErrorFactory
