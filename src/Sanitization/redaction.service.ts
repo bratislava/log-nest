@@ -1,17 +1,17 @@
 // TODO this should be a store, where redactors can be registered and called to run by name.
 
 import { Injectable } from '@nestjs/common'
-import { Redactor } from './redaction.types'
-import { ThrowerErrorGuard } from '../errors/thrower-error.guard'
-import { ErrorsEnum, ErrorsResponseEnum } from '../errors/base-errors.enum'
+
+import { ErrorEnum, ErrorResponseEnum } from '../errors/base-errors.enum'
+import { ErrorFactoryService } from '../errors/error-factory.service'
 import { LineLoggerSubservice } from '../logging/line-logger.subservice'
+import { Redactor } from './redaction.types'
 
 type RedactedValue<T> = unknown extends T
   ? unknown
   : T extends object
     ? T
     : string
-
 
 @Injectable()
 export class RedactionService {
@@ -22,16 +22,16 @@ export class RedactionService {
 
   private readonly logger = new LineLoggerSubservice(RedactionService.name)
 
-  constructor(private readonly throwerErrorGuard: ThrowerErrorGuard) {
+  constructor(private readonly errorFactoryService: ErrorFactoryService) {
     this.redactorMap = {}
   }
 
   register(...redactors: Redactor[]) {
     redactors.forEach((redactor) => {
       if (Object.keys(this.redactorMap).includes(redactor.name)) {
-        this.throwerErrorGuard.BadGatewayException({
-          errorEnum: ErrorsEnum.DUPLICATE_REDACTOR_ERROR,
-          message: ErrorsResponseEnum.DUPLICATE_REDACTOR_ERROR,
+        this.errorFactoryService.BadGatewayException({
+          errorEnum: ErrorEnum.DUPLICATE_REDACTOR_ERROR,
+          message: ErrorResponseEnum.DUPLICATE_REDACTOR_ERROR,
         })
       }
       this.redactorMap[redactor.name] = redactor.redact
@@ -88,9 +88,9 @@ export class RedactionService {
         const redact = this.redactorMap[name]
         if (!redact) {
           this.logger.error(
-            this.throwerErrorGuard.InternalServerErrorException({
-              errorEnum: ErrorsEnum.UNREGISTERED_REDACTOR_ERROR,
-              message: `${ErrorsResponseEnum.UNREGISTERED_REDACTOR_ERROR} Got: "${name}".`,
+            this.errorFactoryService.InternalServerErrorException({
+              errorEnum: ErrorEnum.UNREGISTERED_REDACTOR_ERROR,
+              message: `${ErrorResponseEnum.UNREGISTERED_REDACTOR_ERROR} Got: "${name}".`,
             }),
           )
           return current
