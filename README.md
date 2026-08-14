@@ -129,11 +129,11 @@ export class FormsService {
 with your own and keep type safety:
 
 ```ts
-enum UserErrorsEnum {
+enum UserErrorEnum {
   USER_NOT_VERIFIED = 'USER_NOT_VERIFIED',
 }
 
-type AppErrorEnums = ErrorEnum | UserErrorsEnum
+type AppErrorEnums = ErrorEnum | UserErrorEnum
 
 @Injectable()
 export class UserService {
@@ -145,7 +145,7 @@ export class UserService {
   verify(user: User): void {
     if (!user.verified) {
       throw this.errorFactoryService.ForbiddenException({
-        errorEnum: UserErrorsEnum.USER_NOT_VERIFIED,
+        errorEnum: UserErrorEnum.USER_NOT_VERIFIED,
         message: 'User is not verified.',
       })
     }
