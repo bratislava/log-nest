@@ -1,22 +1,22 @@
 import { HttpStatus } from '@nestjs/common'
 import { AxiosError, AxiosHeaders, InternalAxiosRequestConfig } from 'axios'
 
-import { ErrorsEnum, ErrorsResponseEnum } from '../base-errors.enum'
+import { ErrorEnum, ErrorResponseEnum } from '../base-errors.enum'
 import { ErrorSymbols } from '../error-symbols'
 import { ResponseErrorInternalDto } from '../response-error.dto'
-import { ThrowerErrorGuard } from '../thrower-error.guard'
+import { ErrorFactory } from '../error-factory.service'
 
-describe('ThrowerErrorGuard', () => {
-  let guard: ThrowerErrorGuard
+describe('ErrorFactory', () => {
+  let guard: ErrorFactory
 
   beforeEach(() => {
     jest.resetAllMocks()
     // alertReporting is injected via NestLoggingModule.forRoot() in the app; here
     // we construct the guard directly with the list the alert assertions rely on.
-    guard = new ThrowerErrorGuard({
+    guard = new ErrorFactory({
       alertReporting: [
-        ErrorsEnum.DATABASE_ERROR,
-        ErrorsEnum.BAD_GATEWAY_AUTH_ERROR,
+        ErrorEnum.DATABASE_ERROR,
+        ErrorEnum.BAD_GATEWAY_AUTH_ERROR,
       ],
     })
   })
@@ -29,7 +29,7 @@ describe('ThrowerErrorGuard', () => {
     it('should alert', () => {
       const result = guard
         .BadRequestException({
-          errorEnum: ErrorsEnum.DATABASE_ERROR,
+          errorEnum: ErrorEnum.DATABASE_ERROR,
           message: 'Some message',
         })
         .getResponse() as ResponseErrorInternalDto
@@ -40,7 +40,7 @@ describe('ThrowerErrorGuard', () => {
     it('should not alert', () => {
       const result = guard
         .BadRequestException({
-          errorEnum: ErrorsEnum.NOT_FOUND_ERROR,
+          errorEnum: ErrorEnum.NOT_FOUND_ERROR,
           message: 'Some message',
         })
         .getResponse() as ResponseErrorInternalDto
@@ -95,7 +95,7 @@ describe('ThrowerErrorGuard', () => {
           statusOverrides: {
             404: {
               status: HttpStatus.NOT_FOUND,
-              errorEnum: ErrorsEnum.NOT_FOUND_ERROR,
+              errorEnum: ErrorEnum.NOT_FOUND_ERROR,
               message: 'Downstream resource missing',
             },
           },
@@ -103,7 +103,7 @@ describe('ThrowerErrorGuard', () => {
 
         expect(result.getStatus()).toBe(HttpStatus.NOT_FOUND)
         const response = result.getResponse() as ResponseErrorInternalDto
-        expect(response.errorName).toBe(ErrorsEnum.NOT_FOUND_ERROR)
+        expect(response.errorName).toBe(ErrorEnum.NOT_FOUND_ERROR)
         expect(response.message).toBe('Downstream resource missing')
         expect(response.status).toBe('Not Found')
       })
@@ -118,7 +118,7 @@ describe('ThrowerErrorGuard', () => {
           statusOverrides: {
             [HttpStatus.SERVICE_UNAVAILABLE]: {
               status: HttpStatus.BAD_REQUEST,
-              errorEnum: ErrorsEnum.BAD_REQUEST_ERROR,
+              errorEnum: ErrorEnum.BAD_REQUEST_ERROR,
               message: 'Override wins',
             },
           },
@@ -126,7 +126,7 @@ describe('ThrowerErrorGuard', () => {
 
         expect(result.getStatus()).toBe(HttpStatus.BAD_REQUEST)
         const response = result.getResponse() as ResponseErrorInternalDto
-        expect(response.errorName).toBe(ErrorsEnum.BAD_REQUEST_ERROR)
+        expect(response.errorName).toBe(ErrorEnum.BAD_REQUEST_ERROR)
         expect(response.message).toBe('Override wins')
       })
 
@@ -136,11 +136,11 @@ describe('ThrowerErrorGuard', () => {
         const response = guard
           .fromAxiosError(error, {
             message: 'top-level message',
-            errorEnumOverwrite: ErrorsEnum.DATABASE_ERROR,
+            errorEnumOverwrite: ErrorEnum.DATABASE_ERROR,
             statusOverrides: {
               500: {
                 status: HttpStatus.INTERNAL_SERVER_ERROR,
-                errorEnum: ErrorsEnum.INTERNAL_SERVER_ERROR,
+                errorEnum: ErrorEnum.INTERNAL_SERVER_ERROR,
                 message: 'override message',
               },
             },
@@ -148,7 +148,7 @@ describe('ThrowerErrorGuard', () => {
           .getResponse() as ResponseErrorInternalDto
 
         expect(response.message).toBe('override message')
-        expect(response.errorName).toBe(ErrorsEnum.INTERNAL_SERVER_ERROR)
+        expect(response.errorName).toBe(ErrorEnum.INTERNAL_SERVER_ERROR)
       })
 
       it('falls through when the downstream status does not match any override entry', () => {
@@ -158,7 +158,7 @@ describe('ThrowerErrorGuard', () => {
           statusOverrides: {
             404: {
               status: HttpStatus.NOT_FOUND,
-              errorEnum: ErrorsEnum.NOT_FOUND_ERROR,
+              errorEnum: ErrorEnum.NOT_FOUND_ERROR,
               message: 'not used',
             },
           },
@@ -166,7 +166,7 @@ describe('ThrowerErrorGuard', () => {
 
         expect(result.getStatus()).toBe(HttpStatus.BAD_GATEWAY)
         const response = result.getResponse() as ResponseErrorInternalDto
-        expect(response.errorName).toBe(ErrorsEnum.BAD_GATEWAY_ERROR)
+        expect(response.errorName).toBe(ErrorEnum.BAD_GATEWAY_ERROR)
       })
 
       it('falls back to options.message for status text when STATUS_CODES has no entry', () => {
@@ -178,7 +178,7 @@ describe('ThrowerErrorGuard', () => {
             statusOverrides: {
               599: {
                 status: 599,
-                errorEnum: ErrorsEnum.BAD_GATEWAY_ERROR,
+                errorEnum: ErrorEnum.BAD_GATEWAY_ERROR,
                 message: 'override message',
               },
             },
@@ -201,9 +201,9 @@ describe('ThrowerErrorGuard', () => {
 
         expect(result.getStatus()).toBe(HttpStatus.SERVICE_UNAVAILABLE)
         const response = result.getResponse() as ResponseErrorInternalDto
-        expect(response.errorName).toBe(ErrorsEnum.SERVICE_UNAVAILABLE_ERROR)
+        expect(response.errorName).toBe(ErrorEnum.SERVICE_UNAVAILABLE_ERROR)
         expect(response.message).toBe(
-          ErrorsResponseEnum.SERVICE_UNAVAILABLE_ERROR,
+          ErrorResponseEnum.SERVICE_UNAVAILABLE_ERROR,
         )
         expect(response[ErrorSymbols.alert]).toBe(0)
       })
@@ -217,7 +217,7 @@ describe('ThrowerErrorGuard', () => {
 
         expect(result.getStatus()).toBe(HttpStatus.BAD_GATEWAY)
         const response = result.getResponse() as ResponseErrorInternalDto
-        expect(response.errorName).toBe(ErrorsEnum.BAD_GATEWAY_ERROR)
+        expect(response.errorName).toBe(ErrorEnum.BAD_GATEWAY_ERROR)
       })
     })
 
@@ -234,9 +234,9 @@ describe('ThrowerErrorGuard', () => {
 
           expect(result.getStatus()).toBe(HttpStatus.BAD_GATEWAY)
           const response = result.getResponse() as ResponseErrorInternalDto
-          expect(response.errorName).toBe(ErrorsEnum.BAD_GATEWAY_AUTH_ERROR)
+          expect(response.errorName).toBe(ErrorEnum.BAD_GATEWAY_AUTH_ERROR)
           expect(response.message).toBe(
-            ErrorsResponseEnum.BAD_GATEWAY_AUTH_ERROR,
+            ErrorResponseEnum.BAD_GATEWAY_AUTH_ERROR,
           )
           expect(response[ErrorSymbols.alert]).toBe(1)
         },
@@ -251,8 +251,8 @@ describe('ThrowerErrorGuard', () => {
 
         expect(result.getStatus()).toBe(HttpStatus.BAD_GATEWAY)
         const response = result.getResponse() as ResponseErrorInternalDto
-        expect(response.errorName).toBe(ErrorsEnum.BAD_GATEWAY_ERROR)
-        expect(response.message).toBe(ErrorsResponseEnum.BAD_GATEWAY_ERROR)
+        expect(response.errorName).toBe(ErrorEnum.BAD_GATEWAY_ERROR)
+        expect(response.message).toBe(ErrorResponseEnum.BAD_GATEWAY_ERROR)
         expect(response[ErrorSymbols.alert]).toBe(0)
       })
 
@@ -263,7 +263,7 @@ describe('ThrowerErrorGuard', () => {
 
         expect(result.getStatus()).toBe(HttpStatus.BAD_GATEWAY)
         const response = result.getResponse() as ResponseErrorInternalDto
-        expect(response.errorName).toBe(ErrorsEnum.BAD_GATEWAY_ERROR)
+        expect(response.errorName).toBe(ErrorEnum.BAD_GATEWAY_ERROR)
       })
 
       it('honours errorEnumOverwrite and options.message', () => {
@@ -271,12 +271,12 @@ describe('ThrowerErrorGuard', () => {
 
         const response = guard
           .fromAxiosError(error, {
-            errorEnumOverwrite: ErrorsEnum.DATABASE_ERROR,
+            errorEnumOverwrite: ErrorEnum.DATABASE_ERROR,
             message: 'something else',
           })
           .getResponse() as ResponseErrorInternalDto
 
-        expect(response.errorName).toBe(ErrorsEnum.DATABASE_ERROR)
+        expect(response.errorName).toBe(ErrorEnum.DATABASE_ERROR)
         expect(response.message).toBe('something else')
         expect(response[ErrorSymbols.alert]).toBe(1)
       })

@@ -1,7 +1,7 @@
 import { HttpException } from '@nestjs/common'
 
-import { ErrorsEnum } from '../../errors/base-errors.enum'
-import { ThrowerErrorGuard } from '../../errors/thrower-error.guard'
+import { ErrorEnum } from '../../errors/base-errors.enum'
+import { ErrorFactory } from '../../errors/error-factory.service'
 import {
   errorToLogfmt,
   escapeForLogfmt,
@@ -138,12 +138,12 @@ describe('Testing logging:', () => {
       ).toBe(true)
     })
 
-    it('should stringify HttpException from ThrowerErrorGuard', () => {
-      const thrower = new ThrowerErrorGuard({
-        alertReporting: [ErrorsEnum.INTERNAL_SERVER_ERROR],
+    it('should stringify HttpException from ErrorFactory', () => {
+      const errorFactory = new ErrorFactory({
+        alertReporting: [ErrorEnum.INTERNAL_SERVER_ERROR],
       })
-      const error = thrower.InternalServerErrorException({
-        errorEnum: ErrorsEnum.INTERNAL_SERVER_ERROR,
+      const error = errorFactory.InternalServerErrorException({
+        errorEnum: ErrorEnum.INTERNAL_SERVER_ERROR,
         message: 'Test message',
         console: 'console input',
         error: new Error('Test error message'),

@@ -1,4 +1,4 @@
-export enum ErrorsEnum {
+export enum ErrorEnum {
   // 4xx
   BAD_REQUEST_ERROR = 'BAD_REQUEST_ERROR',
   UNAUTHORIZED_ERROR = 'UNAUTHORIZED_ERROR',
@@ -42,7 +42,7 @@ export enum ErrorsEnum {
   BAD_GATEWAY_AUTH_ERROR = 'BAD_GATEWAY_AUTH_ERROR',
 }
 
-export enum ErrorsResponseEnum {
+export enum ErrorResponseEnum {
   // 4xx
   BAD_REQUEST_ERROR = 'Bad request.',
   UNAUTHORIZED_ERROR = 'Unauthorized.',

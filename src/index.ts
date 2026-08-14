@@ -6,8 +6,8 @@ export { LineLoggerSubservice } from './logging/line-logger.subservice'
 export { errorToLogfmt, escapeForLogfmt, toLogfmt } from './logging/logfmt'
 
 // Errors
-export { ErrorsEnum, ErrorsResponseEnum } from './errors/base-errors.enum'
-export { ThrowerErrorGuard } from './errors/thrower-error.guard'
+export { ErrorEnum, ErrorResponseEnum } from './errors/base-errors.enum'
+export { ErrorFactory } from './errors/error-factory.service'
 
 // Filters
 export { ErrorFilter, HttpExceptionFilter } from './filters/error.filter'
@@ -18,6 +18,6 @@ export { AppLoggerMiddleware } from './middlewares/logger.middleware'
 // Decorators
 export {
   CatchDatabaseError,
-  type IHasThrowerErrorGuard,
+  type IHasErrorFactory,
 } from './decorators/catch-database-error.decorator'
 export { HandleErrors } from './decorators/handle-errors.decorator'

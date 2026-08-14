@@ -1,5 +1,5 @@
-import { ErrorsEnum, ErrorsResponseEnum } from '../errors/base-errors.enum'
-import { ThrowerErrorGuard } from '../errors/thrower-error.guard'
+import { ErrorEnum, ErrorResponseEnum } from '../errors/base-errors.enum'
+import { ErrorFactory } from '../errors/error-factory.service'
 
 function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
   return (
@@ -10,22 +10,22 @@ function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
 }
 
 /** Classes using {@link CatchDatabaseError} must expose the guard under this name. */
-export interface IHasThrowerErrorGuard {
-  throwerErrorGuard: ThrowerErrorGuard
+export interface IHasErrorFactory {
+  errorFactory: ErrorFactory
 }
 
 /**
  * Maps any error thrown by the decorated method into an
- * `UnprocessableEntityException` with {@link ErrorsEnum.DATABASE_ERROR}, passing
+ * `UnprocessableEntityException` with {@link ErrorEnum.DATABASE_ERROR}, passing
  * the original error as the cause. Preserves the method's sync/async nature.
  *
- * The host class must implement {@link IHasThrowerErrorGuard}.
+ * The host class must implement {@link IHasErrorFactory}.
  *
  * @example
  * ```ts
  * @Injectable()
- * class FormRepository implements IHasThrowerErrorGuard {
- *   constructor(public readonly throwerErrorGuard: ThrowerErrorGuard) {}
+ * class FormRepository implements IHasErrorFactory {
+ *   constructor(public readonly errorFactory: ErrorFactory) {}
  *
  *   @CatchDatabaseError()
  *   async findForm(id: string) {
@@ -36,31 +36,31 @@ export interface IHasThrowerErrorGuard {
  */
 export function CatchDatabaseError() {
   return function (
-    target: IHasThrowerErrorGuard,
+    target: IHasErrorFactory,
     _propertyKey: string,
     descriptor: PropertyDescriptor,
   ): PropertyDescriptor {
     const originalMethod = descriptor.value as (
-      this: IHasThrowerErrorGuard,
+      this: IHasErrorFactory,
       ...args: unknown[]
     ) => unknown
 
     descriptor.value = function (
-      this: IHasThrowerErrorGuard,
+      this: IHasErrorFactory,
       ...args: unknown[]
     ): unknown {
       const mapError = (error: unknown): never => {
         // non-optional per types, but a JS consumer / DI mistake can omit it
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-        if (!this.throwerErrorGuard) {
+        if (!this.errorFactory) {
           throw new Error(
-            `CatchDatabaseError decorator requires the class to have a 'throwerErrorGuard' property. ` +
-              `Please ensure ${target.constructor.name} implements IHasThrowerErrorGuard.`,
+            `CatchDatabaseError decorator requires the class to have a 'errorFactory' property. ` +
+              `Please ensure ${target.constructor.name} implements IHasErrorFactory.`,
           )
         }
-        throw this.throwerErrorGuard.UnprocessableEntityException({
-          errorEnum: ErrorsEnum.DATABASE_ERROR,
-          message: ErrorsResponseEnum.DATABASE_ERROR,
+        throw this.errorFactory.UnprocessableEntityException({
+          errorEnum: ErrorEnum.DATABASE_ERROR,
+          message: ErrorResponseEnum.DATABASE_ERROR,
           error,
         })
       }

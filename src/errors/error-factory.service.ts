@@ -10,13 +10,13 @@ import {
 import { AxiosError } from 'axios'
 
 import { NEST_LOGGING_OPTIONS, type NestLoggingOptions } from '../options'
-import { ErrorsEnum, ErrorsResponseEnum } from './base-errors.enum'
+import { ErrorEnum, ErrorResponseEnum } from './base-errors.enum'
 import { ErrorSymbols } from './error-symbols'
 import { ResponseErrorInternalDto } from './response-error.dto'
 import { FromAxiosErrorOptions } from './status-override'
 
 /**
- * Arguments for the per-status factory methods of {@link ThrowerErrorGuard}.
+ * Arguments for the per-status factory methods of {@link ErrorFactory}.
  *
  * @property errorEnum stored as `errorName` on the produced exception. Drives
  *        alerting via the injected `alertReporting` list.
@@ -36,7 +36,7 @@ export interface LoggingExceptionOptions<TErrorEnum extends string = string> {
 // Provided dynamically via NestLoggingModule.forRoot(), which the static plugin can't detect.
 @Injectable()
 // eslint-disable-next-line @darraghor/nestjs-typed/injectable-should-be-provided
-export class ThrowerErrorGuard<TErrorEnum extends string = string> {
+export class ErrorFactory<TErrorEnum extends string = string> {
   private readonly alertReporting: readonly string[]
 
   constructor(
@@ -44,7 +44,7 @@ export class ThrowerErrorGuard<TErrorEnum extends string = string> {
     @Inject(NEST_LOGGING_OPTIONS)
     options?: NestLoggingOptions,
   ) {
-    // Optional so the guard can be constructed in tests / `new ThrowerErrorGuard()`
+    // Optional so the guard can be constructed in tests / `new ErrorFactory()`
     // without NestLoggingModule.forRoot(). Without options no error alerts (empty list).
     this.alertReporting = options?.alertReporting ?? []
   }
@@ -156,14 +156,14 @@ export class ThrowerErrorGuard<TErrorEnum extends string = string> {
    *     message from the override entry
    * - `503` with `Retry-After` -> {@link ServiceUnavailableException}
    * - `401` / `403` -> {@link BadGatewayException} with
-   *     `ErrorsEnum.BAD_GATEWAY_AUTH_ERROR`
+   *     `ErrorEnum.BAD_GATEWAY_AUTH_ERROR`
    * - anything else -> {@link BadGatewayException} with
-   *     `ErrorsEnum.BAD_GATEWAY_ERROR`
+   *     `ErrorEnum.BAD_GATEWAY_ERROR`
    *
-   * `ErrorsEnum.BAD_GATEWAY_AUTH_ERROR` must be listed in the injected
+   * `ErrorEnum.BAD_GATEWAY_AUTH_ERROR` must be listed in the injected
    * `alertReporting` so misconfigured credentials/secrets alert instead of
-   * failing silently. `ErrorsEnum.SERVICE_UNAVAILABLE_ERROR` and
-   * `ErrorsEnum.BAD_GATEWAY_ERROR` should not be alerted.
+   * failing silently. `ErrorEnum.SERVICE_UNAVAILABLE_ERROR` and
+   * `ErrorEnum.BAD_GATEWAY_ERROR` should not be alerted.
    *
    * @param error the processed AxiosError
    * @param options for overriding message and errorEnum. Adds an option to
@@ -202,8 +202,8 @@ export class ThrowerErrorGuard<TErrorEnum extends string = string> {
       return this.ServiceUnavailableException({
         errorEnum:
           errorEnumOverwrite ??
-          (ErrorsEnum.SERVICE_UNAVAILABLE_ERROR as TErrorEnum),
-        message: message ?? ErrorsResponseEnum.SERVICE_UNAVAILABLE_ERROR,
+          (ErrorEnum.SERVICE_UNAVAILABLE_ERROR as TErrorEnum),
+        message: message ?? ErrorResponseEnum.SERVICE_UNAVAILABLE_ERROR,
         console,
         error,
       })
@@ -216,8 +216,8 @@ export class ThrowerErrorGuard<TErrorEnum extends string = string> {
       return this.BadGatewayException({
         errorEnum:
           errorEnumOverwrite ??
-          (ErrorsEnum.BAD_GATEWAY_AUTH_ERROR as TErrorEnum),
-        message: message ?? ErrorsResponseEnum.BAD_GATEWAY_AUTH_ERROR,
+          (ErrorEnum.BAD_GATEWAY_AUTH_ERROR as TErrorEnum),
+        message: message ?? ErrorResponseEnum.BAD_GATEWAY_AUTH_ERROR,
         console,
         error,
       })
@@ -225,8 +225,8 @@ export class ThrowerErrorGuard<TErrorEnum extends string = string> {
 
     return this.BadGatewayException({
       errorEnum:
-        errorEnumOverwrite ?? (ErrorsEnum.BAD_GATEWAY_ERROR as TErrorEnum),
-      message: message ?? ErrorsResponseEnum.BAD_GATEWAY_ERROR,
+        errorEnumOverwrite ?? (ErrorEnum.BAD_GATEWAY_ERROR as TErrorEnum),
+      message: message ?? ErrorResponseEnum.BAD_GATEWAY_ERROR,
       console,
       error,
     })

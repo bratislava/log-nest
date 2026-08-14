@@ -1,5 +1,5 @@
-import { ErrorsEnum } from '../../errors/base-errors.enum'
-import { ThrowerErrorGuard } from '../../errors/thrower-error.guard'
+import { ErrorEnum } from '../../errors/base-errors.enum'
+import { ErrorFactory } from '../../errors/error-factory.service'
 import { HandleErrors } from '../handle-errors.decorator'
 
 describe('HandleErrors', () => {
@@ -35,15 +35,15 @@ describe('HandleErrors', () => {
 
   it('should catch and handle HttpExceptions', async () => {
     class TestClass {
-      private throwerErrorGuard = new ThrowerErrorGuard({
-        alertReporting: [ErrorsEnum.INTERNAL_SERVER_ERROR],
+      private errorFactory = new ErrorFactory({
+        alertReporting: [ErrorEnum.INTERNAL_SERVER_ERROR],
       })
 
       @HandleErrors('Test error handler')
       async testMethod(): Promise<void> {
         return Promise.reject(
-          this.throwerErrorGuard.BadRequestException({
-            errorEnum: ErrorsEnum.INTERNAL_SERVER_ERROR,
+          this.errorFactory.BadRequestException({
+            errorEnum: ErrorEnum.INTERNAL_SERVER_ERROR,
             message: 'Error message',
             console: 'Console error',
             error: new Error('Caused by error message test'),

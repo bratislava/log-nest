@@ -17,7 +17,7 @@ export interface StatusOverride<TErrorEnum extends string = string> {
 }
 
 /**
- * Options for `ThrowerErrorGuard.fromAxiosError`.
+ * Options for `ErrorFactory.fromAxiosError`.
  *
  * @property message human-readable text on the produced exception's `message`
  *        field. Applies to all statuses except overridden ones.
