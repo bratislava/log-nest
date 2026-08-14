@@ -6,10 +6,6 @@ export { LineLoggerSubservice } from './logging/line-logger.subservice'
 export { errorToLogfmt, escapeForLogfmt, toLogfmt } from './logging/logfmt'
 
 // Sanitization
-export {
-  birthNumberRedactor,
-  emailRedactor,
-} from './Sanitization/utils/redactor.functions'
 export { RedactionService } from './Sanitization/redaction.service'
 export type { Redactor } from './Sanitization/redaction.types'
 export { SanitizationModule } from './Sanitization/sanitization.module'

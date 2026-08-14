@@ -24,7 +24,8 @@ export class AppLoggerMiddleware implements NestMiddleware {
     response.send = (exitData: string | object | Buffer | unknown[]) => {
       response.locals.middlewareUsed = undefined
 
-      const redactorNames = this.extractLoggingOptions(exitData)?.redactorNames ?? []
+      const redactorNames =
+        this.extractLoggingOptions(exitData)?.redactorNames ?? []
 
       const { responseLogData, logData, returnExitData } = this.parseExitData(
         response,
@@ -112,8 +113,7 @@ export class AppLoggerMiddleware implements NestMiddleware {
       return undefined
     }
     return (exitData as Record<symbol, unknown>)[NEST_LOGGING_OPTIONS] as
-      | SanitizeMetadata
-      | undefined
+      SanitizeMetadata | undefined
   }
 
   private parseExitData(
