@@ -7,6 +7,9 @@ import { NEST_LOGGING_OPTIONS } from '../options'
 import { RedactionService } from '../Sanitization/redaction.service'
 import { SanitizeMetadata } from '../Sanitization/redaction.types'
 
+/** Anything Express's `response.send` accepts. */
+type ExitData = string | object | Buffer | unknown[]
+
 const SERVER_ERROR_FROM = 500
 const CLIENT_ERROR_FROM = 400
 
@@ -21,7 +24,7 @@ export class AppLoggerMiddleware implements NestMiddleware {
     response.locals.middlewareUsed = 'true'
 
     const { send } = response
-    response.send = (exitData: string | object | Buffer | unknown[]) => {
+    response.send = (exitData: ExitData) => {
       response.locals.middlewareUsed = undefined
 
       const redactorNames =
@@ -107,7 +110,7 @@ export class AppLoggerMiddleware implements NestMiddleware {
    * properties can't be attached to a primitive string value.
    */
   private extractLoggingOptions(
-    exitData: string | object | Buffer | unknown[],
+    exitData: unknown,
   ): SanitizeMetadata | undefined {
     if (typeof exitData !== 'object' || exitData === null) {
       return undefined
@@ -118,7 +121,7 @@ export class AppLoggerMiddleware implements NestMiddleware {
 
   private parseExitData(
     response: Response,
-    exitData: string | object | Buffer | unknown[],
+    exitData: ExitData,
     redactorNames: readonly string[],
   ): {
     returnExitData: typeof exitData

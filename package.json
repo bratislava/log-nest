@@ -32,7 +32,6 @@
     "test:watch": "jest --watch",
     "format": "prettier --write \"src/**/*.ts\"",
     "lint": "eslint \"{src,test}/**/*.{ts,js}\"",
-    "lint:report": "eslint -f json -o eslint-report.json \"{src,test}/**/*.{ts,js}\"",
     "lint:fix": "eslint \"{src,test}/**/*.{ts,js}\" --fix"
   },
   "repository": {
