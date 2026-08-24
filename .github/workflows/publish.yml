@@ -16,8 +16,9 @@ jobs:
         with:
           node-version: "24.x"
           registry-url: "https://registry.npmjs.org/"
-      # Ensure npm 11.5.1 or later is installed - https://docs.npmjs.com/trusted-publishers
-      - run: npm install -g npm@latest
+      # npm 12 for install-time security defaults; >=11.5.1 required for trusted publishing
+      # https://docs.npmjs.com/trusted-publishers
+      - run: npm install -g npm@12
       - run: npm ci
         # recommended security tip from npm docs - https://docs.npmjs.com/trusted-publishers
         env:
