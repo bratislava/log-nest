@@ -1,5 +1,5 @@
 import { NEST_LOGGING_OPTIONS } from '../../options'
-import { AllowShape, mergeAllowShapesInternal } from './allow-list.types'
+import { AllowShape, mergeAllowShapes } from './allow-list.types'
 
 export interface Redactor {
   /** Unique identifier */
@@ -50,10 +50,12 @@ export function mergeSanitizeMetadata(
         ...(patch.redactorNames ?? []),
       ]),
     ],
-    allowShape: mergeAllowShapesInternal(
-      existing?.allowShape,
-      patch.allowShape,
-    ),
+    allowShape:
+      existing?.allowShape === undefined
+        ? patch.allowShape
+        : patch.allowShape === undefined
+          ? existing.allowShape
+          : mergeAllowShapes(existing.allowShape, patch.allowShape),
     valueIsNotObject: patch.valueIsNotObject ?? existing?.valueIsNotObject,
   }
 }
