@@ -3,12 +3,19 @@ import { NextFunction, Request, Response } from 'express'
 
 import { LineLoggerSubservice } from '../logging/line-logger.subservice'
 import { separateLogFromResponseObj } from '../logging/logfmt'
+import { NEST_LOGGING_OPTIONS } from '../options'
+import { RedactionService } from '../Sanitization/redaction.service'
+import { SanitizeMetadata } from '../Sanitization/redaction.types'
 
 const SERVER_ERROR_FROM = 500
 const CLIENT_ERROR_FROM = 400
 
+type ExitData = string | object | Buffer | unknown[]
+
 @Injectable()
 export class AppLoggerMiddleware implements NestMiddleware {
+  constructor(private readonly redactionService: RedactionService) {}
+
   use(request: Request, response: Response, next: NextFunction): void {
     const { method, originalUrl, body, ip, userAgent, userId } =
       this.extractRequestData(request)
@@ -16,12 +23,16 @@ export class AppLoggerMiddleware implements NestMiddleware {
     response.locals.middlewareUsed = 'true'
 
     const { send } = response
-    response.send = (exitData: string | object | Buffer | unknown[]) => {
+    response.send = (exitData: ExitData) => {
       response.locals.middlewareUsed = undefined
 
-      const { responseData, logData, returnExitData } = this.parseExitData(
+      const redactorNames =
+        this.extractLoggingOptions(exitData)?.redactorNames ?? []
+
+      const { responseLogData, logData, returnExitData } = this.parseExitData(
         response,
         exitData,
+        redactorNames,
       )
 
       const logger = new LineLoggerSubservice(response.statusMessage)
@@ -29,6 +40,7 @@ export class AppLoggerMiddleware implements NestMiddleware {
       const diff = process.hrtime(startAt)
       const responseTime = diff[0] * 1e3 + diff[1] * 1e-6
       const logObj: Record<string, string | number> = {
+        test: 'true',
         method,
         originalUrl,
         statusCode: response.statusCode,
@@ -36,8 +48,10 @@ export class AppLoggerMiddleware implements NestMiddleware {
         userAgent,
         ip,
         userId,
-        'request-body': JSON.stringify(body),
-        'response-data': responseData,
+        'request-body': JSON.stringify(
+          this.redactionService.redact(redactorNames, body),
+        ),
+        'response-data': responseLogData,
         ...logData,
       }
       if (response.statusCode >= SERVER_ERROR_FROM || logObj.alert === 1) {
@@ -85,12 +99,32 @@ export class AppLoggerMiddleware implements NestMiddleware {
     return { method, originalUrl, body, ip, userAgent, userId }
   }
 
+  /**
+   * Reads `@Redact`'s `{ valueIsNotObject?, redactors? }` metadata directly
+   * off `exitData` by its actual Symbol key. `@Redact` attaches this to any
+   * object-typed return value (including arrays and Buffers, since those are
+   * `typeof 'object'` too) — not only the plain-object case `parseExitData`
+   * mainly deals with — so this must run before any branch decides the
+   * metadata isn't there. A string `exitData` can't carry it: symbol-keyed
+   * properties can't be attached to a primitive string value.
+   */
+  private extractLoggingOptions(
+    exitData: ExitData,
+  ): SanitizeMetadata | undefined {
+    if (typeof exitData !== 'object' || (exitData as unknown) === null) {
+      return undefined
+    }
+    return Reflect.get(exitData, NEST_LOGGING_OPTIONS) as
+      SanitizeMetadata | undefined
+  }
+
   private parseExitData(
     response: Response,
-    exitData: string | object | Buffer | unknown[],
+    exitData: ExitData,
+    redactorNames: readonly string[],
   ): {
     returnExitData: typeof exitData
-    responseData: string
+    responseLogData: string
     logData: Record<string, unknown>
   } {
     if (
@@ -100,7 +134,7 @@ export class AppLoggerMiddleware implements NestMiddleware {
         .includes('application/json')
     ) {
       return {
-        responseData: exitData as string,
+        responseLogData: exitData as string,
         returnExitData: exitData,
         logData: {},
       }
@@ -115,7 +149,7 @@ export class AppLoggerMiddleware implements NestMiddleware {
       } catch {
         // If parsing fails, assume it's a plain string
         return {
-          responseData: exitData,
+          responseLogData: exitData,
           returnExitData: exitData,
           logData: {},
         }
@@ -124,8 +158,9 @@ export class AppLoggerMiddleware implements NestMiddleware {
 
     // Special handling for arrays
     if (Array.isArray(data)) {
+      const redactedArray = this.redactionService.redact(redactorNames, data)
       return {
-        responseData: JSON.stringify(data),
+        responseLogData: JSON.stringify(redactedArray),
         returnExitData: JSON.stringify(data),
         logData: {},
       }
@@ -137,11 +172,28 @@ export class AppLoggerMiddleware implements NestMiddleware {
         ? (JSON.parse(exitData) as object)
         : exitData,
     )
-    const returnExitData = JSON.stringify(responseMessage)
+
+    // `@Redact` marks non-object return values by wrapping them as
+    // `{ value, [NEST_LOGGING_OPTIONS] }` so the metadata had somewhere to
+    // live — unwrap that back to the value.
+    const responseValue = this.extractLoggingOptions(exitData)?.valueIsNotObject
+      ? (responseMessage as { value: unknown }).value
+      : responseMessage
+
+    // Redact the live value structurally (same as `request-body`) before it
+    // ever becomes a flat JSON string, instead of stringifying first and
+    // rescanning the whole blob as text.
+    const redactedResponseValue = this.redactionService.redact(
+      redactorNames,
+      responseValue,
+    )
 
     return {
-      returnExitData: responseMessage,
-      responseData: returnExitData,
+      returnExitData: responseValue as typeof exitData,
+      responseLogData:
+        typeof redactedResponseValue === 'string'
+          ? redactedResponseValue
+          : JSON.stringify(redactedResponseValue),
       logData: responseLog,
     }
   }
