@@ -1,22 +1,13 @@
-import { filterByShape, mergeAllowShapesInternal } from '../types/allow-list.types'
+import { filterByShape, mergeAllowShapes } from '../types/allow-list.types'
 
 describe('mergeAllowShapes', () => {
-  it('returns the other side when one side is undefined', () => {
-    expect(mergeAllowShapesInternal(undefined, { id: true })).toEqual({ id: true })
-    expect(mergeAllowShapesInternal({ id: true }, undefined)).toEqual({ id: true })
-  })
-
-  it('returns undefined when both sides are undefined', () => {
-    expect(mergeAllowShapesInternal(undefined, undefined)).toBeUndefined()
-  })
-
   it('lets `true` win over a nested shape for the same key', () => {
-    expect(mergeAllowShapesInternal(true, { id: true })).toBe(true)
-    expect(mergeAllowShapesInternal({ id: true }, true)).toBe(true)
+    expect(mergeAllowShapes(true, { id: true })).toBe(true)
+    expect(mergeAllowShapes({ id: true }, true)).toBe(true)
   })
 
   it('unions disjoint keys from both sides', () => {
-    expect(mergeAllowShapesInternal({ id: true }, { email: true })).toEqual({
+    expect(mergeAllowShapes({ id: true }, { email: true })).toEqual({
       id: true,
       email: true,
     })
@@ -24,7 +15,7 @@ describe('mergeAllowShapes', () => {
 
   it('recursively merges a shared nested key', () => {
     expect(
-      mergeAllowShapesInternal(
+      mergeAllowShapes(
         { user: { id: true } },
         { user: { email: true } },
       ),

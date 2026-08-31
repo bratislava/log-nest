@@ -3,9 +3,8 @@ import { Injectable } from '@nestjs/common'
 import {
   AllowShape,
   filterByShape,
-  mergeAllowShapesInternal,
+  mergeAllowShapes,
 } from './types/allow-list.types'
-
 
 @Injectable()
 // eslint-disable-next-line @darraghor/nestjs-typed/injectable-should-be-provided
@@ -19,7 +18,9 @@ export class AllowListService {
 
   filter(routeShape: AllowShape | undefined, value: unknown): unknown {
     return filterByShape(
-      mergeAllowShapesInternal(this.globalShape, routeShape),
+      routeShape
+        ? mergeAllowShapes(this.globalShape, routeShape)
+        : this.globalShape,
       value,
     )
   }
