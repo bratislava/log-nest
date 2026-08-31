@@ -15,26 +15,24 @@ type RedactedValue<T> = unknown extends T
 
 @Injectable()
 export class RedactionService {
-  private readonly redactorMap: Record<string, Redactor['redact']>
+  private readonly redactorMap = new Map<string, Redactor['redact']>()
 
   /** Names merged into every `redact()` call. See {@link registerGlobal}. */
   private readonly globalNames: string[] = []
 
   private readonly logger = new LineLoggerSubservice(RedactionService.name)
 
-  constructor(private readonly errorFactoryService: ErrorFactoryService) {
-    this.redactorMap = {}
-  }
+  constructor(private readonly errorFactoryService: ErrorFactoryService) {}
 
   register(...redactors: Redactor[]) {
     redactors.forEach((redactor) => {
-      if (Object.keys(this.redactorMap).includes(redactor.name)) {
+      if (this.redactorMap.has(redactor.name)) {
         this.errorFactoryService.BadGatewayException({
           errorEnum: ErrorEnum.DUPLICATE_REDACTOR_ERROR,
           message: ErrorResponseEnum.DUPLICATE_REDACTOR_ERROR,
         })
       }
-      this.redactorMap[redactor.name] = redactor.redact
+      this.redactorMap.set(redactor.name, redactor.redact)
     })
   }
 
@@ -85,7 +83,7 @@ export class RedactionService {
   private applyRedactors(names: readonly string[], value: unknown): unknown {
     if (typeof value === 'string') {
       return names.reduce((current, name) => {
-        const redact = this.redactorMap[name]
+        const redact = this.redactorMap.get(name)
         if (!redact) {
           this.logger.error(
             this.errorFactoryService.InternalServerErrorException({
