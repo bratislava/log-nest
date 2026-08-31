@@ -111,7 +111,7 @@ export class AppLoggerMiddleware implements NestMiddleware {
   private extractLoggingOptions(
     exitData: ExitData,
   ): SanitizeMetadata | undefined {
-    if (typeof exitData !== 'object' || exitData === null) {
+    if (typeof exitData !== 'object' || (exitData as unknown) === null) {
       return undefined
     }
     return (exitData as Record<symbol, unknown>)[NEST_LOGGING_OPTIONS] as
