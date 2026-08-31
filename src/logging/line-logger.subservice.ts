@@ -35,7 +35,9 @@ function getCurrentDateTime(): string {
  * any `@Injectable()` class. Each consumer will be given its own instance, auto
  * named after the consuming class.
  */
+// Provided dynamically via NestLoggingModule.forRoot(), which the static plugin can't detect.
 @Injectable({ scope: Scope.TRANSIENT })
+// eslint-disable-next-line @darraghor/nestjs-typed/injectable-should-be-provided
 export class LineLoggerSubservice implements LoggerService {
   protected readonly context?: string
 
