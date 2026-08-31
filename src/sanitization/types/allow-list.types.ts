@@ -17,10 +17,7 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
  * `undefined` on one side means "no opinion" and the other side's shape is
  * used as-is, recursively.
  */
-export function mergeAllowShapes(
-  a: AllowShape,
-  b: AllowShape,
-): AllowShape {
+export function mergeAllowShapes(a: AllowShape, b: AllowShape): AllowShape {
   return mergeAllowShapesInternal(a, b) as AllowShape
 }
 
@@ -40,6 +37,7 @@ export function mergeAllowShapesInternal(
 
   const merged: Record<string, AllowShape> = {}
   for (const key of new Set([...Object.keys(a), ...Object.keys(b)])) {
+    // eslint-disable-next-line security/detect-object-injection
     const mergedChild = mergeAllowShapesInternal(a[key], b[key])
     if (mergedChild !== undefined) {
       // eslint-disable-next-line security/detect-object-injection
@@ -73,8 +71,10 @@ export function filterByShape(
   if (isPlainRecord(value)) {
     const filtered: Record<string, unknown> = {}
     for (const [key, entryValue] of Object.entries(value)) {
+      // eslint-disable-next-line security/detect-object-injection
       const filteredChild = filterByShape(shape[key], entryValue)
       if (filteredChild !== undefined) {
+        // eslint-disable-next-line security/detect-object-injection
         filtered[key] = filteredChild
       }
     }

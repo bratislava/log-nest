@@ -2,8 +2,8 @@ import { DynamicModule, Global, Module } from '@nestjs/common'
 
 import { ErrorFactoryService } from '../errors/error-factory.service'
 import { AllowListService } from './allow-list.service'
-import { AllowShape } from './types/allow-list.types'
 import { RedactionService } from './redaction.service'
+import { AllowShape } from './types/allow-list.types'
 import { Redactor } from './types/redaction.types'
 
 export interface SanitizationOptions {

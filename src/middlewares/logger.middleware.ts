@@ -5,8 +5,8 @@ import { LineLoggerSubservice } from '../logging/line-logger.subservice'
 import { separateLogFromResponseObj } from '../logging/logfmt'
 import { NEST_LOGGING_OPTIONS } from '../options'
 import { AllowListService } from '../sanitization/allow-list.service'
-import { AllowShape } from '../sanitization/types/allow-list.types'
 import { RedactionService } from '../sanitization/redaction.service'
+import { AllowShape } from '../sanitization/types/allow-list.types'
 import { SanitizeMetadata } from '../sanitization/types/redaction.types'
 
 const SERVER_ERROR_FROM = 500

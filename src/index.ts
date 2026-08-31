@@ -7,13 +7,13 @@ export { errorToLogfmt, escapeForLogfmt, toLogfmt } from './logging/logfmt'
 
 // Sanitization
 export { AllowListService } from './sanitization/allow-list.service'
-export type { AllowShape } from './sanitization/types/allow-list.types'
 export { RedactionService } from './sanitization/redaction.service'
-export type { Redactor, SanitizeMetadata } from './sanitization/types/redaction.types'
 export {
   SanitizationModule,
   type SanitizationOptions,
 } from './sanitization/sanitization.module'
+export type { AllowShape } from './sanitization/types/allow-list.types'
+export type { Redactor, SanitizeMetadata } from './sanitization/types/redaction.types'
 
 // Errors
 export { ErrorEnum, ErrorResponseEnum } from './errors/base-errors.enum'
