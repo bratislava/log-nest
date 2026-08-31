@@ -21,7 +21,12 @@ export function mergeAllowShapes(a: AllowShape, b: AllowShape): AllowShape {
   return mergeAllowShapesInternal(a, b) as AllowShape
 }
 
-export function mergeAllowShapesInternal(
+/**
+ * @returns the merged `AllowShape`, or `undefined` if both `a` and `b` are
+ * `undefined`. (The `@returns` tag is required here as without it, sonarjs
+ * flags the mixed `true`/object/`undefined` return as inconsistent.)
+ */
+function mergeAllowShapesInternal(
   a: AllowShape | undefined,
   b: AllowShape | undefined,
 ): AllowShape | undefined {
