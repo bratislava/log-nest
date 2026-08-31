@@ -1,5 +1,4 @@
-import { NEST_LOGGING_OPTIONS } from '../options'
-import { SanitizeMetadata } from '../Sanitization/redaction.types'
+import { attachSanitizeMetadata } from '../sanitization/types/redaction.types'
 
 /**
  * Marks a method's return value (or thrown error) so that the named
@@ -36,24 +35,18 @@ export function Redact(...redactorNames: string[]): MethodDecorator {
         result = await method.apply(this, args)
       } catch (error) {
         if (typeof error === 'object' && error !== null) {
-          const metadata: SanitizeMetadata = { redactorNames }
-          Object.assign(error, { [NEST_LOGGING_OPTIONS]: metadata })
+          attachSanitizeMetadata(error, { redactorNames })
         }
         throw error
       }
 
       if (typeof result === 'object' && result !== null) {
-        const metadata: SanitizeMetadata = { redactorNames }
-        return Object.assign(result, { [NEST_LOGGING_OPTIONS]: metadata })
+        return attachSanitizeMetadata(result, { redactorNames })
       }
-      const metadata: SanitizeMetadata = {
-        valueIsNotObject: true,
-        redactorNames,
-      }
-      return {
-        value: result,
-        [NEST_LOGGING_OPTIONS]: metadata,
-      }
+      return attachSanitizeMetadata(
+        { value: result },
+        { valueIsNotObject: true, redactorNames },
+      )
     }
 
     return descriptor
