@@ -1,6 +1,13 @@
 import * as process from 'node:process'
 
-import { LoggerService } from '@nestjs/common'
+import {
+  Inject,
+  Injectable,
+  LoggerService,
+  Optional,
+  Scope,
+} from '@nestjs/common'
+import { INQUIRER } from '@nestjs/core'
 
 import { escapeForLogfmt, isLogfmt, toLogfmt } from './logfmt'
 
@@ -21,14 +28,29 @@ function getCurrentDateTime(): string {
  * (`key="value" …`), optimized for Grafana Loki. A string message is passed
  * through when it is already logfmt, otherwise wrapped as `message="…"`;
  * non-string args are serialized via {@link toLogfmt}.
+ *
+ * Usable two ways:
+ * - Manually: `new LineLoggerSubservice('MyContext')`.
+ * - Via DI: `constructor(private readonly logger: LineLoggerSubservice) {}` in
+ * any `@Injectable()` class. Each consumer will be given its own instance, auto
+ * named after the consuming class.
  */
+// Provided dynamically via NestLoggingModule.forRoot(), which the static plugin can't detect.
+@Injectable({ scope: Scope.TRANSIENT })
+// eslint-disable-next-line @darraghor/nestjs-typed/injectable-should-be-provided
 export class LineLoggerSubservice implements LoggerService {
   protected readonly context?: string
 
   protected readonly color: boolean
 
-  constructor(context?: string, color = true) {
-    this.context = context
+  constructor(
+    @Optional() @Inject(INQUIRER) contextOrInquirer?: string | object,
+    color = true,
+  ) {
+    this.context =
+      typeof contextOrInquirer === 'string'
+        ? contextOrInquirer
+        : contextOrInquirer?.constructor.name
     this.color = color
   }
 
