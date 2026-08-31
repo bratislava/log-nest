@@ -50,16 +50,20 @@ export function mergeSanitizeMetadata(
         ...(patch.redactorNames ?? []),
       ]),
     ],
-    allowShape: mergeAllowShapesInternal(existing?.allowShape, patch.allowShape),
+    allowShape: mergeAllowShapesInternal(
+      existing?.allowShape,
+      patch.allowShape,
+    ),
     valueIsNotObject: patch.valueIsNotObject ?? existing?.valueIsNotObject,
   }
 }
 
 /** Reads whatever `@Redact`/`@AllowList` has already attached to `target`, if any. */
-export function readSanitizeMetadata(target: object): SanitizeMetadata | undefined {
-  return (target as Record<symbol, unknown>)[NEST_LOGGING_OPTIONS] as
-    | SanitizeMetadata
-    | undefined
+export function readSanitizeMetadata(
+  target: object,
+): SanitizeMetadata | undefined {
+  return Reflect.get(target, NEST_LOGGING_OPTIONS) as
+    SanitizeMetadata | undefined
 }
 
 /**
