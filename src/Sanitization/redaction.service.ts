@@ -14,6 +14,7 @@ type RedactedValue<T> = unknown extends T
     : string
 
 @Injectable()
+// eslint-disable-next-line @darraghor/nestjs-typed/injectable-should-be-provided
 export class RedactionService {
   private readonly redactorMap = new Map<string, Redactor['redact']>()
 
