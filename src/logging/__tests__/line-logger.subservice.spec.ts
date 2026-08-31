@@ -30,6 +30,7 @@ describe('LineLoggerService', () => {
     ['verbose', 'VERBOSE'],
     ['fatal', 'FATAL'],
   ])('should print %s message with severity %s', (method, severity) => {
+    // eslint-disable-next-line security/detect-object-injection
     service[method]('test message')
 
     // eslint-disable-next-line security/detect-non-literal-regexp
