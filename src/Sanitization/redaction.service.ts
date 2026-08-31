@@ -117,7 +117,7 @@ export class RedactionService {
     } catch {
       return value
     }
-    return stringified === undefined
+    return (stringified as string | undefined) === undefined
       ? value
       : this.applyRedactors(names, stringified)
   }
