@@ -2,7 +2,12 @@ import { NEST_LOGGING_OPTIONS } from '../options'
 import { SanitizeMetadata } from '../Sanitization/redaction.types'
 
 /**
- * TODO description
+ * Marks a method's return value (or thrown error) so that the named
+ * redactors mask matching substrings (e.g. emails, tokens) wherever that
+ * value ends up in a log line. The value itself is left untouched. Callers
+ * still get the original, unredacted data back, only what gets written to
+ * the logs is scrubbed.
+ *
  * TODO consider moving this into sanitization module
  */
 export function Redact(...redactorNames: string[]): MethodDecorator {
