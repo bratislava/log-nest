@@ -5,9 +5,8 @@ import { RedactionService } from './redaction.service'
 import { Redactor } from './redaction.types'
 
 /**
- * Provides {@link RedactionService} process-wide, so any module — including
- * one that wires up `AppLoggerMiddleware` — can inject it without explicitly
- * importing this module.
+ * Provides {@link RedactionService} process-wide, so any module can inject it
+ * without explicitly importing this module.
  *
  * Register once at the app root:
  *
