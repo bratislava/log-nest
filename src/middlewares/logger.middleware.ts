@@ -10,6 +10,8 @@ import { SanitizeMetadata } from '../Sanitization/redaction.types'
 const SERVER_ERROR_FROM = 500
 const CLIENT_ERROR_FROM = 400
 
+type ExitData = string | object | Buffer | unknown[]
+
 @Injectable()
 export class AppLoggerMiddleware implements NestMiddleware {
   constructor(private readonly redactionService: RedactionService) {}
@@ -21,7 +23,7 @@ export class AppLoggerMiddleware implements NestMiddleware {
     response.locals.middlewareUsed = 'true'
 
     const { send } = response
-    response.send = (exitData: string | object | Buffer | unknown[]) => {
+    response.send = (exitData: ExitData) => {
       response.locals.middlewareUsed = undefined
 
       const redactorNames =
@@ -107,7 +109,7 @@ export class AppLoggerMiddleware implements NestMiddleware {
    * properties can't be attached to a primitive string value.
    */
   private extractLoggingOptions(
-    exitData: string | object | Buffer | unknown[],
+    exitData: ExitData,
   ): SanitizeMetadata | undefined {
     if (typeof exitData !== 'object' || exitData === null) {
       return undefined
@@ -118,7 +120,7 @@ export class AppLoggerMiddleware implements NestMiddleware {
 
   private parseExitData(
     response: Response,
-    exitData: string | object | Buffer | unknown[],
+    exitData: ExitData,
     redactorNames: readonly string[],
   ): {
     returnExitData: typeof exitData
