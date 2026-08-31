@@ -15,7 +15,7 @@ type RedactedValue<T> = unknown extends T
 
 @Injectable()
 export class RedactionService {
-  private readonly redactorMap: Record<string, Redactor['redact']>
+  private readonly redactorMap: Record<string, Redactor['redact'] | undefined>
 
   /** Names merged into every `redact()` call. See {@link registerGlobal}. */
   private readonly globalNames: string[] = []
@@ -112,14 +112,16 @@ export class RedactionService {
       )
     }
 
-    let stringified: string | undefined
+    // JSON.stringify is typed as returning `string`, but returns `undefined`
+    // for undefined/function/symbol values.
+    let stringified: unknown
     try {
       stringified = JSON.stringify(value)
     } catch {
       return value
     }
-    return stringified === undefined
-      ? value
-      : this.applyRedactors(names, stringified)
+    return typeof stringified === 'string'
+      ? this.applyRedactors(names, stringified)
+      : value
   }
 }

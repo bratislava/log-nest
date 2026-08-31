@@ -33,9 +33,7 @@ export interface LoggingExceptionOptions<TErrorEnum extends string = string> {
   error?: unknown
 }
 
-// Provided dynamically via NestLoggingModule.forRoot(), which the static plugin can't detect.
 @Injectable()
-// eslint-disable-next-line @darraghor/nestjs-typed/injectable-should-be-provided
 export class ErrorFactoryService<TErrorEnum extends string = string> {
   private readonly alertReporting: readonly string[]
 
