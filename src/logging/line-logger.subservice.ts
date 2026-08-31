@@ -48,7 +48,7 @@ export class LineLoggerSubservice implements LoggerService {
     this.context =
       typeof contextOrInquirer === 'string'
         ? contextOrInquirer
-        : contextOrInquirer?.constructor?.name
+        : contextOrInquirer?.constructor.name
     this.color = color
   }
 
