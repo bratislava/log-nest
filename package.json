@@ -1,0 +1,83 @@
+{
+  "name": "@bratislava/log-nest",
+  "version": "0.0.1",
+  "description": "Structured logging and error handling for NestJS, with single-line logfmt output for Grafana Loki.",
+  "keywords": [
+    "nestjs",
+    "logging",
+    "logfmt",
+    "loki",
+    "grafana",
+    "error-handling"
+  ],
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "rimraf dist && tsc -p tsconfig.build.json",
+    "prepare": "npm run build",
+    "typecheck": "tsc --noEmit",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "lint": "eslint \"{src,test}/**/*.{ts,js}\"",
+    "lint:report": "eslint -f json -o eslint-report.json \"{src,test}/**/*.{ts,js}\"",
+    "lint:fix": "eslint \"{src,test}/**/*.{ts,js}\" --fix"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bratislava/log-nest.git"
+  },
+  "author": "Department of Innovation and Technology of the City of Bratislava",
+  "private": false,
+  "license": "EUPL-1.2",
+  "peerDependencies": {
+    "@nestjs/common": "^11.0.0",
+    "axios": "^1.0.0",
+    "express": "^5.0.0",
+    "reflect-metadata": "^0.2.0"
+  },
+  "peerDependenciesMeta": {
+    "axios": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@bratislava/eslint-config-nest": "0.19.1",
+    "@nestjs/common": "11.1.29",
+    "@types/express": "5.0.6",
+    "@types/jest": "30.0.0",
+    "@types/node": "24.12.2",
+    "axios": "1.18.1",
+    "express": "5.2.1",
+    "jest": "30.4.2",
+    "prettier": "3.9.6",
+    "reflect-metadata": "0.2.2",
+    "rimraf": "6.1.3",
+    "ts-jest": "29.4.11",
+    "ts-node": "10.9.2",
+    "typescript": "6.0.3"
+  },
+  "overrides": {
+    "minimatch": "10.2.6"
+  },
+  "engines": {
+    "node": ">=24.16.0",
+    "npm": ">=11.13.0"
+  },
+  "volta": {
+    "node": "24.16.0",
+    "npm": "11.13.0"
+  }
+}
