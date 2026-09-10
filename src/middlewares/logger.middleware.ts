@@ -4,8 +4,10 @@ import { NextFunction, Request, Response } from 'express'
 import { LineLoggerSubservice } from '../logging/line-logger.subservice'
 import { separateLogFromResponseObj } from '../logging/logfmt'
 import { NEST_LOGGING_OPTIONS } from '../options'
-import { RedactionService } from '../Sanitization/redaction.service'
-import { SanitizeMetadata } from '../Sanitization/redaction.types'
+import { AllowListService } from '../sanitization/allow-list.service'
+import { RedactionService } from '../sanitization/redaction.service'
+import { AllowShape } from '../sanitization/types/allow-list.types'
+import { SanitizeMetadata } from '../sanitization/types/redaction.types'
 
 const SERVER_ERROR_FROM = 500
 const CLIENT_ERROR_FROM = 400
@@ -14,7 +16,10 @@ type ExitData = string | object | Buffer | unknown[]
 
 @Injectable()
 export class AppLoggerMiddleware implements NestMiddleware {
-  constructor(private readonly redactionService: RedactionService) {}
+  constructor(
+    private readonly redactionService: RedactionService,
+    private readonly allowListService: AllowListService,
+  ) {}
 
   use(request: Request, response: Response, next: NextFunction): void {
     const { method, originalUrl, body, ip, userAgent, userId } =
@@ -26,13 +31,15 @@ export class AppLoggerMiddleware implements NestMiddleware {
     response.send = (exitData: ExitData) => {
       response.locals.middlewareUsed = undefined
 
-      const redactorNames =
-        this.extractLoggingOptions(exitData)?.redactorNames ?? []
+      const loggingOptions = this.extractLoggingOptions(exitData)
+      const redactorNames = loggingOptions?.redactorNames ?? []
+      const allowShape = loggingOptions?.allowShape
 
       const { responseLogData, logData, returnExitData } = this.parseExitData(
         response,
         exitData,
         redactorNames,
+        allowShape,
       )
 
       const logger = new LineLoggerSubservice(response.statusMessage)
@@ -49,7 +56,10 @@ export class AppLoggerMiddleware implements NestMiddleware {
         ip,
         userId,
         'request-body': JSON.stringify(
-          this.redactionService.redact(redactorNames, body),
+          this.redactionService.redact(
+            redactorNames,
+            this.allowListService.filter(allowShape, body),
+          ),
         ),
         'response-data': responseLogData,
         ...logData,
@@ -122,6 +132,7 @@ export class AppLoggerMiddleware implements NestMiddleware {
     response: Response,
     exitData: ExitData,
     redactorNames: readonly string[],
+    allowShape: AllowShape | undefined,
   ): {
     returnExitData: typeof exitData
     responseLogData: string
@@ -158,7 +169,10 @@ export class AppLoggerMiddleware implements NestMiddleware {
 
     // Special handling for arrays
     if (Array.isArray(data)) {
-      const redactedArray = this.redactionService.redact(redactorNames, data)
+      const redactedArray = this.redactionService.redact(
+        redactorNames,
+        this.allowListService.filter(allowShape, data),
+      )
       return {
         responseLogData: JSON.stringify(redactedArray),
         returnExitData: JSON.stringify(data),
@@ -182,10 +196,11 @@ export class AppLoggerMiddleware implements NestMiddleware {
 
     // Redact the live value structurally (same as `request-body`) before it
     // ever becomes a flat JSON string, instead of stringifying first and
-    // rescanning the whole blob as text.
+    // rescanning the whole blob as text. Allowlist filtering runs first —
+    // structural (which keys survive) before content (what's left in them).
     const redactedResponseValue = this.redactionService.redact(
       redactorNames,
-      responseValue,
+      this.allowListService.filter(allowShape, responseValue),
     )
 
     return {

@@ -5,7 +5,7 @@ import { Injectable } from '@nestjs/common'
 import { ErrorEnum, ErrorResponseEnum } from '../errors/base-errors.enum'
 import { ErrorFactoryService } from '../errors/error-factory.service'
 import { LineLoggerSubservice } from '../logging/line-logger.subservice'
-import { Redactor } from './redaction.types'
+import { Redactor } from './types/redaction.types'
 
 type RedactedValue<T> = unknown extends T
   ? unknown
