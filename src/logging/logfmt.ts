@@ -114,8 +114,11 @@ function httpExceptionToObj(
       method: methodName,
       stack: error.stack,
     }
-  } catch {
-    // TODO do we want to log this caught error?
+  } catch (parseError) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      `message="Failed to parse HttpException response while formatting logfmt" ${errorToLogfmt(parseError, methodName)}`,
+    )
     return {
       errorType: error.name,
       message: error.message,
