@@ -1,0 +1,26 @@
+name: Publish Package to npm
+on:
+  release:
+    types: [created]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24.x"
+          registry-url: "https://registry.npmjs.org/"
+      # Ensure npm 11.5.1 or later is installed - https://docs.npmjs.com/trusted-publishers
+      - run: npm install -g npm@latest
+      - run: npm ci
+        # recommended security tip from npm docs - https://docs.npmjs.com/trusted-publishers
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_READ_TOKEN }}
+      - run: npm run build
+      - run: npm publish --access public
