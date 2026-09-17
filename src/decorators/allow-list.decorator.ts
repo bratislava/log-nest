@@ -1,6 +1,6 @@
 import { attachSanitizeMetadata } from '../sanitization/sanitize-metadata.util'
 import { AllowShape } from '../sanitization/types/allow-list.types'
-import { attachSanitizeMetadata } from '../sanitization/types/redaction.types'
+import { preserveMethodMetadata } from './utils/preserve-method-metadata'
 
 function wrapMethod(
   descriptor: PropertyDescriptor,
@@ -17,7 +17,7 @@ function wrapMethod(
     ...args: unknown[]
   ) => unknown
 
-  descriptor.value = async function allowListWrapper(
+  const allowListWrapper = async function allowListWrapper(
     this: unknown,
     ...args: unknown[]
   ): Promise<unknown> {
@@ -39,6 +39,9 @@ function wrapMethod(
       { valueIsNotObject: true, allowShape: shape },
     )
   }
+
+  preserveMethodMetadata(method, allowListWrapper)
+  descriptor.value = allowListWrapper
 
   return descriptor
 }
