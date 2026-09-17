@@ -16,8 +16,9 @@ export interface SanitizationOptions {
   /**
    * App-wide default allowlist for `request-body`/`response-data`.
    * `@AllowList(...)` at the controller/endpoint level only ever widens it
-   * further for that route, it can't narrow it. Omit to keep today's
-   * behavior (`true` means nothing filtered) until routes opt in.
+   * further for that route, it can't narrow it. Deny by default (`{}`) when
+   * omitted, so nothing is logged until something (this option or a
+   * per-route `@AllowList`) explicitly allows it.
    */
   allowShape?: AllowShape
 }
@@ -54,7 +55,7 @@ export class SanitizationModule {
           provide: AllowListService,
           useFactory: () => {
             const allowListService = new AllowListService()
-            allowListService.setGlobalShape(options.allowShape ?? true)
+            allowListService.setGlobalShape(options.allowShape ?? {})
             return allowListService
           },
         },
