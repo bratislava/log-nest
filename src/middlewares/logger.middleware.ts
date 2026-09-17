@@ -47,13 +47,20 @@ export class AppLoggerMiddleware implements NestMiddleware {
       const redactorNames = loggingOptions?.redactorNames ?? []
       const allowShape = loggingOptions?.allowShape
 
-      const { responseLogData, returnExitData } = this.parseExitData(
+      const { responseValue, returnExitData } = this.parseExitData(
         response,
         exitData,
         loggingOptions,
+      )
+      const redactedResponseValue = this.sanitize(
         redactorNames,
         allowShape,
+        responseValue,
       )
+      const responseLogData =
+        typeof redactedResponseValue === 'string'
+          ? redactedResponseValue
+          : JSON.stringify(redactedResponseValue)
 
       // `error.filter.ts` parks log-only fields (errorType, stack, alert,
       // console, ...) here, since they never belong in the client-facing body.
@@ -75,10 +82,7 @@ export class AppLoggerMiddleware implements NestMiddleware {
         ip,
         userId,
         'request-body': JSON.stringify(
-          this.redactionService.redact(
-            redactorNames,
-            this.allowListService.filter(allowShape, body),
-          ),
+          this.sanitize(redactorNames, allowShape, body),
         ),
         'response-data': responseLogData,
         ...errorLogData,
@@ -141,6 +145,15 @@ export class AppLoggerMiddleware implements NestMiddleware {
     return { method, originalUrl, body, ip, userAgent, userId }
   }
 
+  private sanitize(
+    redactorNames: readonly string[],
+    allowShape: AllowShape | undefined,
+    value: unknown,
+  ): unknown {
+    const filtered = this.allowListService.filter(allowShape, value)
+    return this.redactionService.redact(redactorNames, filtered)
+  }
+
   /**
    * Tries `exitData`'s own symbol first, falling back to `res.locals`
    * (single-use, always cleared after).
@@ -175,15 +188,18 @@ export class AppLoggerMiddleware implements NestMiddleware {
       SanitizeMetadata | undefined
   }
 
+  /**
+   * Picks apart `exitData` into the value to actually log (`responseValue`,
+   * still unsanitized - the caller runs it through `sanitize()`) and the
+   * value to send back to the client (`returnExitData`, never sanitized).
+   */
   private parseExitData(
     response: Response,
     exitData: ExitData,
     loggingOptions: SanitizeMetadata | undefined,
-    redactorNames: readonly string[],
-    allowShape: AllowShape | undefined,
   ): {
     returnExitData: typeof exitData
-    responseLogData: string
+    responseValue: unknown
   } {
     if (
       !response
@@ -191,10 +207,7 @@ export class AppLoggerMiddleware implements NestMiddleware {
         ?.toString()
         .includes('application/json')
     ) {
-      return {
-        responseLogData: exitData as string,
-        returnExitData: exitData,
-      }
+      return { responseValue: exitData, returnExitData: exitData }
     }
 
     let data: unknown = exitData
@@ -205,49 +218,22 @@ export class AppLoggerMiddleware implements NestMiddleware {
         data = JSON.parse(exitData) as unknown
       } catch {
         // If parsing fails, assume it's a plain string
-        return {
-          responseLogData: exitData,
-          returnExitData: exitData,
-        }
-      }
-    }
-
-    // Special handling for arrays
-    if (Array.isArray(data)) {
-      const redactedArray = this.redactionService.redact(
-        redactorNames,
-        this.allowListService.filter(allowShape, data),
-      )
-      return {
-        responseLogData: JSON.stringify(redactedArray),
-        returnExitData: JSON.stringify(data),
+        return { responseValue: exitData, returnExitData: exitData }
       }
     }
 
     const responseMessage = data as Record<string, unknown>
 
-    // `@Redact` marks non-object return values by wrapping them as
+    // `@Redact`/`@AllowList` mark non-object return values by wrapping them as
     // `{ value, [NEST_LOGGING_OPTIONS] }` so the metadata had somewhere to
-    // live — unwrap that back to the value.
-    const responseValue = this.extractLoggingOptions(exitData)?.valueIsNotObject
+    // live. Unwrap that back to the value. The metadata is read from
+    // `loggingOptions` (resolved by the caller) rather than off `exitData`,
+    // since by the time `res.json` has stringified the wrapper the Symbol key
+    // is already gone and `exitData` is a plain string.
+    const responseValue = loggingOptions?.valueIsNotObject
       ? (responseMessage as { value: unknown }).value
       : responseMessage
 
-    // Redact the live value structurally (same as `request-body`) before it
-    // ever becomes a flat JSON string, instead of stringifying first and
-    // rescanning the whole blob as text. Allowlist filtering runs first —
-    // structural (which keys survive) before content (what's left in them).
-    const redactedResponseValue = this.redactionService.redact(
-      redactorNames,
-      this.allowListService.filter(allowShape, responseValue),
-    )
-
-    return {
-      returnExitData: responseValue as typeof exitData,
-      responseLogData:
-        typeof redactedResponseValue === 'string'
-          ? redactedResponseValue
-          : JSON.stringify(redactedResponseValue),
-    }
+    return { returnExitData: responseValue as typeof exitData, responseValue }
   }
 }
