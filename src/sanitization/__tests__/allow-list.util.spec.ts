@@ -71,4 +71,34 @@ describe('filterByShape', () => {
     ) as Record<string, unknown>
     expect('email' in result).toBe(false)
   })
+
+  it("replaces a disallowed key's value with the placeholder when onDisallowed is `redact`", () => {
+    expect(
+      filterByShape(
+        { id: true },
+        { id: 1, email: 'a@b.com' },
+        { onDisallowed: 'redact' },
+      ),
+    ).toEqual({ id: 1, email: REDACTED_VALUE })
+  })
+
+  it('replaces a disallowed primitive with the placeholder when onDisallowed is `redact`', () => {
+    expect(
+      filterByShape({ id: true }, 'a string', { onDisallowed: 'redact' }),
+    ).toBe(REDACTED_VALUE)
+  })
+
+  it('replaces disallowed array elements with the placeholder when onDisallowed is `redact`', () => {
+    expect(
+      filterByShape({ id: true }, [1, { id: 2, email: 'c@d.com' }], {
+        onDisallowed: 'redact',
+      }),
+    ).toEqual([REDACTED_VALUE, { id: 2, email: REDACTED_VALUE }])
+  })
+
+  it('redacts the whole value when shape is undefined and onDisallowed is `redact`', () => {
+    expect(
+      filterByShape(undefined, { id: 1 }, { onDisallowed: 'redact' }),
+    ).toBe(REDACTED_VALUE)
+  })
 })
