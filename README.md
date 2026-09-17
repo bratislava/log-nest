@@ -79,7 +79,8 @@ export class AppModule implements NestModule {
 
 `AppLoggerMiddleware` depends on both `RedactionService` and `AllowListService`, so
 `SanitizationModule.forRoot()` must be imported even if you don't configure any redactors or
-allowlist yet — omit its options and nothing is filtered, matching today's behavior.
+allowlist yet. Omitting `allowShape` denies by default: nothing is logged until an `allowShape`
+here or a per-route `@AllowList` explicitly allows it.
 
 Then wire the logger and the global exception filters in `main.ts`:
 
@@ -265,10 +266,13 @@ The middleware emits one logfmt line per handled request, containing
 `message`) while the log-only metadata (`alert`, `console`, cause chain, stack) ends up on the log line. This is how
 `console` and `error` from [`ErrorFactoryService`](#throwing-errors-errorfactoryservice) stay log-only.
 
-> [!WARNING]
-> By default the **entire request/response body is logged verbatim**. Use `@AllowList(...)` (below) and/or
-> `SanitizationModule.forRoot({allowShape})` to restrict what ends up in `request-body`/`response-data` before
-> sending secrets or sensitive personal data to endpoints logged by this middleware.
+> [!NOTE]
+> With no `allowShape` configured anywhere, **nothing ends up in `request-body`/`response-data`** — the app-wide
+> default denies everything until something allows it. A per-route `@AllowList(...)` (below) is enough on its own
+> to allow that route's fields, with no `SanitizationModule.forRoot({allowShape})` baseline required. That baseline
+> is still the only lever for anything that never reaches a handler (guard rejections, 404s), since there's no
+> per-route decorator to fall back on there. Either way, `@AllowList(...)` only ever *widens* whatever baseline
+> is set globally, never narrows it.
 
 Also note that `userId` is best-effort: the JWT payload from the `Authorization` header is decoded **without signature
 verification**, purely for log correlation. Never treat it as authenticated.
