@@ -15,15 +15,3 @@ export const ErrorSymbols = {
   causedByMessage: causedByMessageSymbol,
   causedByConsole: causedByConsoleSymbol,
 } as const
-
-export const errorTypeKeys: Record<string, string> = {
-  alert: `$Symbol-alert`,
-  console: `$Symbol-console`,
-  errorType: `$Symbol-errorType`,
-  stack: `$Symbol-stack`,
-  errorCause: `$Symbol-errorCause`,
-  causedByMessage: `$Symbol-causedByMessage`,
-  causedByConsole: `$Symbol-causedByConsole`,
-}
-
-export const errorTypeStrings = Object.values(errorTypeKeys)

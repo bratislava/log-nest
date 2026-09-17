@@ -2,7 +2,6 @@ import { Injectable, NestMiddleware } from '@nestjs/common'
 import { NextFunction, Request, Response } from 'express'
 
 import { LineLoggerSubservice } from '../logging/line-logger.subservice'
-import { separateLogFromResponseObj } from '../logging/logfmt'
 import { NEST_LOGGING_OPTIONS } from '../options'
 import { AllowListService } from '../sanitization/allow-list.service'
 import { RedactionService } from '../sanitization/redaction.service'
@@ -48,13 +47,19 @@ export class AppLoggerMiddleware implements NestMiddleware {
       const redactorNames = loggingOptions?.redactorNames ?? []
       const allowShape = loggingOptions?.allowShape
 
-      const { responseLogData, logData, returnExitData } = this.parseExitData(
+      const { responseLogData, returnExitData } = this.parseExitData(
         response,
         exitData,
         loggingOptions,
         redactorNames,
         allowShape,
       )
+
+      // `error.filter.ts` parks log-only fields (errorType, stack, alert,
+      // console, ...) here, since they never belong in the client-facing body.
+      const errorLogData = response.locals.errorLogData as
+        Record<string, unknown> | undefined
+      response.locals.errorLogData = undefined
 
       const logger = new LineLoggerSubservice(response.statusMessage)
 
@@ -76,7 +81,7 @@ export class AppLoggerMiddleware implements NestMiddleware {
           ),
         ),
         'response-data': responseLogData,
-        ...logData,
+        ...errorLogData,
       }
       if (response.statusCode >= SERVER_ERROR_FROM || logObj.alert === 1) {
         logger.error(logObj)
@@ -173,12 +178,12 @@ export class AppLoggerMiddleware implements NestMiddleware {
   private parseExitData(
     response: Response,
     exitData: ExitData,
+    loggingOptions: SanitizeMetadata | undefined,
     redactorNames: readonly string[],
     allowShape: AllowShape | undefined,
   ): {
     returnExitData: typeof exitData
     responseLogData: string
-    logData: Record<string, unknown>
   } {
     if (
       !response
@@ -189,7 +194,6 @@ export class AppLoggerMiddleware implements NestMiddleware {
       return {
         responseLogData: exitData as string,
         returnExitData: exitData,
-        logData: {},
       }
     }
 
@@ -204,7 +208,6 @@ export class AppLoggerMiddleware implements NestMiddleware {
         return {
           responseLogData: exitData,
           returnExitData: exitData,
-          logData: {},
         }
       }
     }
@@ -218,16 +221,10 @@ export class AppLoggerMiddleware implements NestMiddleware {
       return {
         responseLogData: JSON.stringify(redactedArray),
         returnExitData: JSON.stringify(data),
-        logData: {},
       }
     }
 
-    // Filter out keys starting with `$`. We will log them later
-    const { responseLog, responseMessage } = separateLogFromResponseObj(
-      typeof exitData === 'string'
-        ? (JSON.parse(exitData) as object)
-        : exitData,
-    )
+    const responseMessage = data as Record<string, unknown>
 
     // `@Redact` marks non-object return values by wrapping them as
     // `{ value, [NEST_LOGGING_OPTIONS] }` so the metadata had somewhere to
@@ -251,7 +248,6 @@ export class AppLoggerMiddleware implements NestMiddleware {
         typeof redactedResponseValue === 'string'
           ? redactedResponseValue
           : JSON.stringify(redactedResponseValue),
-      logData: responseLog,
     }
   }
 }
