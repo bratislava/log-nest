@@ -9,7 +9,10 @@ import { Response } from 'express'
 
 import { errorTypeKeys } from '../errors/error-symbols'
 import { LineLoggerSubservice } from '../logging/line-logger.subservice'
-import { symbolKeysToStrings } from '../logging/logfmt'
+import {
+  separateLogFromResponseObj,
+  symbolKeysToStrings,
+} from '../logging/logfmt'
 import { forwardSanitizeMetadataToLocals } from '../sanitization/sanitize-metadata.util'
 
 function rethrowIfNotHttp(
@@ -25,10 +28,12 @@ function rethrowIfNotHttp(
 }
 
 /**
- * Shared response/log handling for the exception filters. Sets the status, then
- * either sends the built JSON body (when `AppLoggerMiddleware` is active, so it
- * strips the Symbol-keyed metadata and logs the line) or, if the middleware is
- * not in play, logs the exception directly.
+ * Shared response/log handling for the exception filters.
+ *
+ * Always sends a response.
+ *
+ * Logs directly and strips the log-only fields itself when `AppLoggerMiddleware`
+ * never ran (e.g. an unmatched route), since then nothing else would.
  */
 function respondOrLog(
   host: ArgumentsHost,
@@ -43,9 +48,12 @@ function respondOrLog(
   if (response.locals.middlewareUsed) {
     forwardSanitizeMetadataToLocals(response.locals, exception)
     response.json(buildBody())
-  } else {
-    new LineLoggerSubservice(filterName).error(exception)
+    return
   }
+
+  new LineLoggerSubservice(filterName).error(exception)
+  const { responseMessage } = separateLogFromResponseObj(buildBody())
+  response.json(responseMessage)
 }
 
 @Catch(Error)
