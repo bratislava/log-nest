@@ -19,17 +19,16 @@ describe('mergeAllowShapes', () => {
 
   it('recursively merges a shared nested key', () => {
     expect(
-      mergeAllowShapes(
-        { user: { id: true } },
-        { user: { email: true } },
-      ),
+      mergeAllowShapes({ user: { id: true } }, { user: { email: true } }),
     ).toEqual({ user: { id: true, email: true } })
   })
 })
 
 describe('filterByShape', () => {
   it('drops everything when shape is undefined', () => {
-    expect(filterByShape(undefined, { id: 1, email: 'a@b.com' })).toBeUndefined()
+    expect(
+      filterByShape(undefined, { id: 1, email: 'a@b.com' }),
+    ).toBeUndefined()
   })
 
   it('keeps a value unchanged when shape is `true`', () => {
@@ -38,9 +37,9 @@ describe('filterByShape', () => {
   })
 
   it('keeps only allowed keys of a plain object', () => {
-    expect(
-      filterByShape({ id: true }, { id: 1, email: 'a@b.com' }),
-    ).toEqual({ id: 1 })
+    expect(filterByShape({ id: true }, { id: 1, email: 'a@b.com' })).toEqual({
+      id: 1,
+    })
   })
 
   it('recurses into nested objects per the shape', () => {
