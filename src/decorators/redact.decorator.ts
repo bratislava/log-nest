@@ -1,4 +1,5 @@
 import { attachSanitizeMetadata } from '../sanitization/sanitize-metadata.util'
+import { preserveMethodMetadata } from './utils/preserve-method-metadata'
 
 /**
  * Marks a method's return value (or thrown error) so that the named
@@ -26,7 +27,7 @@ export function Redact(...redactorNames: string[]): MethodDecorator {
       ...args: unknown[]
     ) => unknown
 
-    descriptor.value = async function redactWrapper(
+    const redactWrapper = async function redactWrapper(
       this: unknown,
       ...args: unknown[]
     ): Promise<unknown> {
@@ -48,6 +49,9 @@ export function Redact(...redactorNames: string[]): MethodDecorator {
         { valueIsNotObject: true, redactorNames },
       )
     }
+
+    preserveMethodMetadata(method, redactWrapper)
+    descriptor.value = redactWrapper
 
     return descriptor
   }
