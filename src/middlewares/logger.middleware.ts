@@ -6,6 +6,7 @@ import { separateLogFromResponseObj } from '../logging/logfmt'
 import { NEST_LOGGING_OPTIONS } from '../options'
 import { AllowListService } from '../sanitization/allow-list.service'
 import { RedactionService } from '../sanitization/redaction.service'
+import { forwardSanitizeMetadataToLocals } from '../sanitization/sanitize-metadata.util'
 import { AllowShape } from '../sanitization/types/allow-list.types'
 import { SanitizeMetadata } from '../sanitization/types/redaction.types'
 
@@ -27,17 +28,30 @@ export class AppLoggerMiddleware implements NestMiddleware {
     const startAt = process.hrtime()
     response.locals.middlewareUsed = 'true'
 
+    // `res.json` stringifies away the Symbol-keyed sanitize metadata before
+    // `res.send` (below) ever sees it, so lift it onto `res.locals` first.
+    const { json } = response
+    response.json = (jsonBody: ExitData) => {
+      forwardSanitizeMetadataToLocals(response.locals, jsonBody)
+      response.json = json
+      return response.json(jsonBody)
+    }
+
     const { send } = response
     response.send = (exitData: ExitData) => {
       response.locals.middlewareUsed = undefined
 
-      const loggingOptions = this.extractLoggingOptions(exitData)
+      const loggingOptions = this.readAndClearSanitizeMetadata(
+        response,
+        exitData,
+      )
       const redactorNames = loggingOptions?.redactorNames ?? []
       const allowShape = loggingOptions?.allowShape
 
       const { responseLogData, logData, returnExitData } = this.parseExitData(
         response,
         exitData,
+        loggingOptions,
         redactorNames,
         allowShape,
       )
@@ -71,6 +85,19 @@ export class AppLoggerMiddleware implements NestMiddleware {
       } else {
         logger.log(logObj)
       }
+
+      // The handler returned a primitive; `@AllowList`/`@Redact` boxed it so Nest
+      // sent it through `res.json`, which set `Content-Type: application/json`.
+      // Now that it's unboxed, drop that header so `res.send` re-infers the type
+      // for the bare value: what Nest would have sent without the decorator.
+      const returnExitValue: unknown = returnExitData
+      if (
+        loggingOptions?.valueIsNotObject &&
+        (typeof returnExitValue !== 'object' || returnExitValue === null)
+      ) {
+        response.removeHeader('content-type')
+      }
+
       response.send = send
       return response.send(returnExitData)
     }
@@ -107,6 +134,21 @@ export class AppLoggerMiddleware implements NestMiddleware {
     }
 
     return { method, originalUrl, body, ip, userAgent, userId }
+  }
+
+  /**
+   * Tries `exitData`'s own symbol first, falling back to `res.locals`
+   * (single-use, always cleared after).
+   */
+  private readAndClearSanitizeMetadata(
+    response: Response,
+    exitData: ExitData,
+  ): SanitizeMetadata | undefined {
+    const meta =
+      this.extractLoggingOptions(exitData) ??
+      (response.locals.sanitizeMetadata as SanitizeMetadata | undefined)
+    response.locals.sanitizeMetadata = undefined
+    return meta
   }
 
   /**
