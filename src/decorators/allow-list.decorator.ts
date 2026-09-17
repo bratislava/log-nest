@@ -1,3 +1,4 @@
+import { attachSanitizeMetadata } from '../sanitization/sanitize-metadata.util'
 import { AllowShape } from '../sanitization/types/allow-list.types'
 import { attachSanitizeMetadata } from '../sanitization/types/redaction.types'
 

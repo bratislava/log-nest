@@ -1,4 +1,4 @@
-import { attachSanitizeMetadata } from '../sanitization/types/redaction.types'
+import { attachSanitizeMetadata } from '../sanitization/sanitize-metadata.util'
 
 /**
  * Marks a method's return value (or thrown error) so that the named
