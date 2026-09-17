@@ -1,5 +1,5 @@
 import { NEST_LOGGING_OPTIONS } from '../options'
-import { mergeAllowShapes } from './types/allow-list.types'
+import { mergeAllowShapes } from './allow-list.util'
 import { SanitizeMetadata } from './types/redaction.types'
 
 /**

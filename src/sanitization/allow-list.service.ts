@@ -1,10 +1,7 @@
 import { Injectable } from '@nestjs/common'
 
-import {
-  AllowShape,
-  filterByShape,
-  mergeAllowShapes,
-} from './types/allow-list.types'
+import { filterByShape, mergeAllowShapes } from './allow-list.util'
+import { AllowShape } from './types/allow-list.types'
 
 @Injectable()
 // eslint-disable-next-line @darraghor/nestjs-typed/injectable-should-be-provided
