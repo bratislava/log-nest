@@ -17,15 +17,15 @@ export interface SanitizationOptions {
    * App-wide default allowlist for `request-body`/`response-data`.
    * `@AllowList(...)` at the controller/endpoint level only ever widens it
    * further for that route, it can't narrow it. Omit to keep today's
-   * behavior (`true` — nothing filtered) until routes opt in.
+   * behavior (`true` means nothing filtered) until routes opt in.
    */
   allowShape?: AllowShape
 }
 
 /**
  * Provides {@link RedactionService} and {@link AllowListService}
- * process-wide, so any module — including one that wires up
- * `AppLoggerMiddleware` — can inject them without explicitly importing this
+ * process-wide, so any module (including one that wires up
+ * `AppLoggerMiddleware`) can inject them without explicitly importing this
  * module.
  *
  * Register once at the app root:

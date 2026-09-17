@@ -209,7 +209,7 @@ export class ErrorFactoryService<TErrorEnum extends string = string> {
       })
     }
 
-    // 401/403 from the downstream means our credentials are wrong/expired — the
+    // 401/403 from the downstream means our credentials are wrong/expired. The
     // request is never going to succeed without direct intervention, so alert
     // by default.
     if (status === HttpStatus.UNAUTHORIZED || status === HttpStatus.FORBIDDEN) {

@@ -54,9 +54,8 @@ function mergeAllowShapesInternal(
 
 /**
  * Recursively keeps only what `shape` allows. A key/element with no
- * corresponding shape is dropped rather than logged by default — that's the
- * whole point of an allowlist. Runs in the logging hot path (every request),
- * so it must never throw.
+ * corresponding shape is dropped rather than logged by default. Runs in the
+ * logging hot path (every request), so it must never throw.
  */
 export function filterByShape(
   shape: AllowShape | undefined,
@@ -86,7 +85,7 @@ export function filterByShape(
     return filtered
   }
 
-  // A non-`true` shape describes an object to recurse into, but `value` is a
-  // primitive — there's nothing further to allow, so drop it.
+  // Else: shape describes an object to recurse into, but `value` is a primitive.
+  // There's nothing further to allow, so drop it.
   return undefined
 }

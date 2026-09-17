@@ -233,7 +233,7 @@ export class FormsService {
 }
 ```
 
-This only works when Nest constructs the class through its own DI container — a class built manually via a custom
+This only works when Nest constructs the class through its own DI container. A class built manually via a custom
 `useFactory` provider won't get a meaningful context this way, so keep using `new LineLoggerSubservice(ClassName.name)`
 there.
 
@@ -277,7 +277,7 @@ verification**, purely for log correlation. Never treat it as authenticated.
 
 `@AllowList(shape)` restricts which keys of `request-body`/`response-data` `AppLoggerMiddleware` is allowed to log,
 on top of the app-wide default from `SanitizationModule.forRoot({allowShape})`. A shape is a tree: `true` keeps a whole
-subtree as-is, and a nested object recurses key-by-key — anything not mentioned is dropped. Each level only ever
+subtree as-is, and a nested object recurses key-by-key. Anything not mentioned is dropped. Each level only ever
 **widens** what's allowed; an endpoint or controller can't narrow the app-wide default below what it already allows.
 
 ```ts
@@ -288,13 +288,13 @@ export class UserController {
   @AllowList({email: true}) // endpoint level: adds `email` on top of the controller's `id`
   async getUser(@Param('id') id: string): Promise<User> {
     return this.userService.findById(id)
-    // logged response-data: { id, email } — every other field is dropped
+    // logged response-data: { id, email } - every other field is dropped
   }
 }
 ```
 
 `@AllowList` works on both methods (endpoint level) and classes (controller level, applied to every method on the
-class). It uses the same wrap-and-stash mechanism as [`@Redact`](#redacting-logged-data-redact) — no
+class). It uses the same wrap-and-stash mechanism as [`@Redact`](#redacting-logged-data-redact): no
 `Reflector`/`ExecutionContext` involved, since `AppLoggerMiddleware` is plain middleware and has none to read from.
 
 ### Redacting logged data: `@Redact`
@@ -330,8 +330,9 @@ export class UserController {
 ```
 
 Like `@AllowList`, it works via the same wrap-and-stash mechanism, is additive across the global/endpoint levels,
-and runs independently of allowlist filtering — allowlist decides *which keys* are logged, redaction decides
-*what's left visible inside them*.
+and runs independently of allowlist filtering: 
+- allowlist decides *which keys* are logged, 
+- redaction decides *what's left visible inside them*.
 
 ### Decorators
 

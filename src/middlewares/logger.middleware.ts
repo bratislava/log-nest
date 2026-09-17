@@ -113,8 +113,8 @@ export class AppLoggerMiddleware implements NestMiddleware {
    * Reads `@Redact`'s `{ valueIsNotObject?, redactors? }` metadata directly
    * off `exitData` by its actual Symbol key. `@Redact` attaches this to any
    * object-typed return value (including arrays and Buffers, since those are
-   * `typeof 'object'` too) — not only the plain-object case `parseExitData`
-   * mainly deals with — so this must run before any branch decides the
+   * `typeof 'object'` too), not only the plain-object case `parseExitData`
+   * mainly deals with, so this must run before any branch decides the
    * metadata isn't there. A string `exitData` can't carry it: symbol-keyed
    * properties can't be attached to a primitive string value.
    */
