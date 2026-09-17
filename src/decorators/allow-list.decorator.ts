@@ -50,7 +50,7 @@ function wrapMethod(
  * can never narrow it below the app default.
  *
  * Usable two ways, following the same wrap-and-stash pattern as `@Redact`
- * (no `Reflector`/`ExecutionContext` involved — `AppLoggerMiddleware` is
+ * (no `Reflector`/`ExecutionContext` involved: `AppLoggerMiddleware` is
  * plain middleware and has no execution context to read reflected metadata
  * from):
  *
