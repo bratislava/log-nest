@@ -9,8 +9,11 @@ import {
 @Injectable()
 // eslint-disable-next-line @darraghor/nestjs-typed/injectable-should-be-provided
 export class AllowListService {
-  /** App-wide default, set via `SanitizationModule.forRoot()`. `true` = no filtering. */
-  private globalShape: AllowShape = true
+  /**
+   * App-wide default, set via `SanitizationModule.forRoot()`. Defaults to
+   * `{}` (deny by default: nothing is logged until something allows it).
+   */
+  private globalShape: AllowShape = {}
 
   setGlobalShape(shape: AllowShape): void {
     this.globalShape = shape
