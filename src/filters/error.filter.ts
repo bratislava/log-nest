@@ -40,19 +40,19 @@ function respondOrLog(
   exception: unknown,
   filterName: string,
   statusCode: number,
-  buildBody: () => Record<string, unknown>,
+  body: Record<string, unknown>,
 ): void {
   const response = host.switchToHttp().getResponse<Response>()
   response.status(statusCode)
 
   if (response.locals.middlewareUsed) {
     forwardSanitizeMetadataToLocals(response.locals, exception)
-    response.json(buildBody())
+    response.json(body)
     return
   }
 
   new LineLoggerSubservice(filterName).error(exception)
-  const { responseMessage } = separateLogFromResponseObj(buildBody())
+  const { responseMessage } = separateLogFromResponseObj(body)
   response.json(responseMessage)
 }
 
@@ -67,12 +67,12 @@ export class ErrorFilter implements ExceptionFilter {
       exception,
       ErrorFilter.name,
       HttpStatus.INTERNAL_SERVER_ERROR,
-      () => ({
+      {
         statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
         [errorTypeKeys.errorType]: name,
         message,
         [errorTypeKeys.stack]: stack,
-      }),
+      },
     )
   }
 }
@@ -84,8 +84,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     const status = exception.getStatus()
     const exceptionResponse = exception.getResponse()
-
-    respondOrLog(host, exception, HttpExceptionFilter.name, status, () =>
+    const body =
       typeof exceptionResponse === 'object'
         ? {
             ...symbolKeysToStrings(exceptionResponse),
@@ -96,7 +95,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
             response: exceptionResponse,
             [errorTypeKeys.errorType]: 'HttpException',
             [errorTypeKeys.stack]: exception.stack,
-          },
-    )
+          }
+
+    respondOrLog(host, exception, HttpExceptionFilter.name, status, body)
   }
 }
