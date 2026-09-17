@@ -10,6 +10,7 @@ import { Response } from 'express'
 import { errorTypeKeys } from '../errors/error-symbols'
 import { LineLoggerSubservice } from '../logging/line-logger.subservice'
 import { symbolKeysToStrings } from '../logging/logfmt'
+import { forwardSanitizeMetadataToLocals } from '../sanitization/sanitize-metadata.util'
 
 function rethrowIfNotHttp(
   host: ArgumentsHost,
@@ -40,6 +41,7 @@ function respondOrLog(
   response.status(statusCode)
 
   if (response.locals.middlewareUsed) {
+    forwardSanitizeMetadataToLocals(response.locals, exception)
     response.json(buildBody())
   } else {
     new LineLoggerSubservice(filterName).error(exception)
