@@ -7,12 +7,8 @@ import {
 } from '@nestjs/common'
 import { Response } from 'express'
 
-import { errorTypeKeys } from '../errors/error-symbols'
 import { LineLoggerSubservice } from '../logging/line-logger.subservice'
-import {
-  separateLogFromResponseObj,
-  symbolKeysToStrings,
-} from '../logging/logfmt'
+import { separateLogFromResponseObj } from '../logging/logfmt'
 import { forwardSanitizeMetadataToLocals } from '../sanitization/sanitize-metadata.util'
 
 function rethrowIfNotHttp(
@@ -32,27 +28,34 @@ function rethrowIfNotHttp(
  *
  * Always sends a response.
  *
- * Logs directly and strips the log-only fields itself when `AppLoggerMiddleware`
- * never ran (e.g. an unmatched route), since then nothing else would.
+ * `ErrorSymbols.*` keys along with `errorType`/ `stack` are split off here and
+ * handed to `res.locals`, for `AppLoggerMiddleware` to fold into the log line.
+ *
+ * Logs directly instead when `AppLoggerMiddleware` never ran (e.g. an unmatched
+ * route), since then nothing else would.
  */
 function respondOrLog(
   host: ArgumentsHost,
   exception: unknown,
   filterName: string,
   statusCode: number,
-  body: Record<string, unknown>,
+  rawBody: object,
+  errorType: string,
+  stack: string | undefined,
 ): void {
   const response = host.switchToHttp().getResponse<Response>()
   response.status(statusCode)
 
+  const { responseLog, responseMessage } = separateLogFromResponseObj(rawBody)
+
   if (response.locals.middlewareUsed) {
     forwardSanitizeMetadataToLocals(response.locals, exception)
-    response.json(body)
+    response.locals.errorLogData = { ...responseLog, errorType, stack }
+    response.json(responseMessage)
     return
   }
 
-  new LineLoggerSubservice(filterName).error(exception)
-  const { responseMessage } = separateLogFromResponseObj(body)
+  new LineLoggerSubservice(filterName).error(exception, responseLog)
   response.json(responseMessage)
 }
 
@@ -67,12 +70,9 @@ export class ErrorFilter implements ExceptionFilter {
       exception,
       ErrorFilter.name,
       HttpStatus.INTERNAL_SERVER_ERROR,
-      {
-        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-        [errorTypeKeys.errorType]: name,
-        message,
-        [errorTypeKeys.stack]: stack,
-      },
+      { statusCode: HttpStatus.INTERNAL_SERVER_ERROR, message },
+      name,
+      stack,
     )
   }
 }
@@ -84,19 +84,19 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     const status = exception.getStatus()
     const exceptionResponse = exception.getResponse()
-    const body =
+    const rawBody =
       typeof exceptionResponse === 'object'
-        ? {
-            ...symbolKeysToStrings(exceptionResponse),
-            [errorTypeKeys.errorType]: 'HttpException',
-            [errorTypeKeys.stack]: exception.stack,
-          }
-        : {
-            response: exceptionResponse,
-            [errorTypeKeys.errorType]: 'HttpException',
-            [errorTypeKeys.stack]: exception.stack,
-          }
+        ? exceptionResponse
+        : { response: exceptionResponse }
 
-    respondOrLog(host, exception, HttpExceptionFilter.name, status, body)
+    respondOrLog(
+      host,
+      exception,
+      HttpExceptionFilter.name,
+      status,
+      rawBody,
+      'HttpException',
+      exception.stack,
+    )
   }
 }
