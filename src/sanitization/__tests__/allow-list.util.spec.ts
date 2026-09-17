@@ -1,4 +1,8 @@
-import { filterByShape, mergeAllowShapes } from '../types/allow-list.types'
+import {
+  filterByShape,
+  mergeAllowShapes,
+  REDACTED_VALUE,
+} from '../allow-list.util'
 
 describe('mergeAllowShapes', () => {
   it('lets `true` win over a nested shape for the same key', () => {
