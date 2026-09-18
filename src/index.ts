@@ -22,6 +22,7 @@ export type { Redactor, SanitizeMetadata } from './sanitization/types/redaction.
 
 // Errors
 export { ErrorEnum, ErrorResponseEnum } from './errors/base-errors.enum'
+export type { LogNestErrorEnumRegistry } from './errors/error-enum-registry'
 export { ErrorFactoryService } from './errors/error-factory.service'
 
 // Filters

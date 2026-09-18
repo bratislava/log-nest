@@ -11,9 +11,21 @@ import { AxiosError } from 'axios'
 
 import { NEST_LOGGING_OPTIONS, type NestLoggingOptions } from '../options'
 import { ErrorEnum, ErrorResponseEnum } from './base-errors.enum'
+import { LogNestErrorEnumRegistry } from './error-enum-registry'
 import { ErrorSymbols } from './error-symbols'
 import { ResponseErrorInternalDto } from './response-error.dto'
 import { FromAxiosErrorOptions } from './status-override'
+
+/**
+ * `LogNestErrorEnumRegistry['errorEnum']` if an app has declaration-merged
+ * it, otherwise `string` - `LogNestErrorEnumRegistry` is empty by default,
+ * so the direct index would be a compile error until something adds the
+ * property.
+ */
+export type DefaultErrorEnum =
+  LogNestErrorEnumRegistry extends { errorEnum: infer TRegistered }
+    ? TRegistered
+    : string
 
 /**
  * Arguments for the per-status factory methods of {@link ErrorFactoryService}.
@@ -26,7 +38,9 @@ import { FromAxiosErrorOptions } from './status-override'
  * @property error the underlying cause, recorded for logging (and its stack is
  *        chained onto the produced exception).
  */
-export interface LoggingExceptionOptions<TErrorEnum extends string = string> {
+export interface LoggingExceptionOptions<
+  TErrorEnum extends string = DefaultErrorEnum,
+> {
   errorEnum: TErrorEnum
   message: string
   console?: string | Record<string, unknown>
@@ -36,7 +50,7 @@ export interface LoggingExceptionOptions<TErrorEnum extends string = string> {
 // Provided dynamically via NestLoggingModule.forRoot(), which the static plugin can't detect.
 @Injectable()
 // eslint-disable-next-line @darraghor/nestjs-typed/injectable-should-be-provided
-export class ErrorFactoryService<TErrorEnum extends string = string> {
+export class ErrorFactoryService<TErrorEnum extends string = DefaultErrorEnum> {
   private readonly alertReporting: readonly string[]
 
   constructor(
