@@ -345,9 +345,9 @@ export class UserController {
 }
 ```
 
-Like `@AllowList`, it works via the same wrap-and-stash mechanism, is additive across the global/endpoint levels,
-and runs independently of allowlist filtering: 
-- allowlist decides *which keys* are logged, 
+Like `@AllowList`, it's additive across the global/endpoint levels, and runs independently of allowlist filtering:
+
+- allowlist decides *which keys* are logged,
 - redaction decides *what's left visible inside them*.
 
 ### Decorators
