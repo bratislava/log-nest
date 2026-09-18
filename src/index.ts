@@ -7,6 +7,10 @@ export { errorToLogfmt, escapeForLogfmt, toLogfmt } from './logging/logfmt'
 
 // Sanitization
 export { AllowListService } from './sanitization/allow-list.service'
+export {
+  birthNumberRedactor,
+  emailRedactor,
+} from './sanitization/default-redactors'
 export { RedactionService } from './sanitization/redaction.service'
 export {
   SanitizationModule,

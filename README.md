@@ -321,17 +321,26 @@ response-data="{\"id\":\"1\",\"secret\":\"[REDACTED]\"}"
 
 ### Redacting logged data: `@Redact`
 
-Where `@AllowList` is *structural* (which keys survive at all), `@Redact` is *content-based*: it masks matching
-patterns (emails, IDs, ...) inside whatever `@AllowList` leaves behind, on the resulting value's string leaves.
-Register named redactors once via `SanitizationModule.forRoot({redactors})`, then reference them by name:
+Where `@AllowList` is *structural* (which keys survive at all), `@Redact` is *content-based*: it masks matching patterns
+(emails, IDs, ...) inside whatever `@AllowList` leaves behind, on the resulting value's string leaves. Register named
+redactors once via `SanitizationModule.forRoot({redactors})`, then reference them by name. `emailRedactor` and
+`birthNumberRedactor` (Slovak "rodné číslo") ship built in:
 
 ```ts
-// redactors.ts
+// app.module.ts
+import {emailRedactor, birthNumberRedactor} from '@bratislava/log-nest'
+
+SanitizationModule.forRoot({redactors: [emailRedactor, birthNumberRedactor]}) // global: applied to every request/response
+```
+
+Writing your own is the same `{name, redact}` shape:
+
+```ts
 import {Redactor} from '@bratislava/log-nest'
 
-export const emailRedactor: Redactor = {
-  name: 'email',
-  redact: (line) => line.replaceAll(/[\w.-]+@[\w.-]+/g, '[REDACTED:email]'),
+export const ipRedactor: Redactor = {
+  name: 'ip',
+  redact: (line) => line.replaceAll(/\b\d{1,3}(\.\d{1,3}){3}\b/g, '<ip>'),
 }
 ```
 
@@ -410,6 +419,7 @@ export class FormRepository implements IHasErrorFactoryService {
 | `Redact`, `AllowList`                                           | decorators        | per-route redaction / allowlist filtering, additive over the global config             |
 | `SanitizationModule`                                            | module            | `forRoot({ redactors, allowShape, onDisallowed })`; provides + globally exports both services below |
 | `ErrorFilter`, `HttpExceptionFilter`, `UnknownExceptionFilter`  | filters           | global exception handling                                                                           |
+| `emailRedactor`, `birthNumberRedactor`                          | `Redactor`        | built-in redactors, ready to pass to `SanitizationModule.forRoot({redactors})`                      |
 
 ## Developing and running tests
 
