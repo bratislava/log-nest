@@ -1,9 +1,11 @@
 import { DynamicModule, Global, Module } from '@nestjs/common'
+import { APP_INTERCEPTOR } from '@nestjs/core'
 
 import { ErrorFactoryService } from '../errors/error-factory.service'
 import { AllowListService } from './allow-list.service'
 import { FilterByShapeOptions } from './allow-list.util'
 import { RedactionService } from './redaction.service'
+import { SanitizeMetadataInterceptor } from './sanitize-metadata.interceptor'
 import { AllowShape } from './types/allow-list.types'
 import { Redactor } from './types/redaction.types'
 
@@ -68,6 +70,7 @@ export class SanitizationModule {
             return allowListService
           },
         },
+        { provide: APP_INTERCEPTOR, useClass: SanitizeMetadataInterceptor },
       ],
       exports: [RedactionService, AllowListService],
     }
