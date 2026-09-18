@@ -21,7 +21,11 @@ export { ErrorEnum, ErrorResponseEnum } from './errors/base-errors.enum'
 export { ErrorFactoryService } from './errors/error-factory.service'
 
 // Filters
-export { ErrorFilter, HttpExceptionFilter } from './filters/error.filter'
+export {
+  ErrorFilter,
+  HttpExceptionFilter,
+  UnknownExceptionFilter,
+} from './filters/error.filter'
 
 // Middlewares
 export { AppLoggerMiddleware } from './middlewares/logger.middleware'
