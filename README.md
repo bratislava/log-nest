@@ -143,21 +143,29 @@ export class FormsService {
 - `ErrorResponseEnum` holds a default client-facing message for every base error code, so the common idiom is pairing
   the two: `errorEnum: ErrorEnum.NOT_FOUND_ERROR, message: ErrorResponseEnum.NOT_FOUND_ERROR`.
 
-**App-specific error enums.** The error factory service is generic over the enum union, so extend the base `ErrorEnum`
-with your own and keep type safety:
+**App-specific error enums.** The error factory service is generic over the enum union. Register your app's union once
+via declaration merging, and every bare `ErrorFactoryService` injection (no generic) is typed with it automatically:
 
 ```ts
+// types.d.ts (anywhere loaded by tsc, e.g. next to main.ts)
 enum UserErrorEnum {
   USER_NOT_VERIFIED = 'USER_NOT_VERIFIED',
 }
 
 type AppErrorEnums = ErrorEnum | UserErrorEnum
 
+declare module '@bratislava/log-nest' {
+  interface LogNestErrorEnumRegistry {
+    errorEnum: AppErrorEnums
+  }
+}
+```
+
+```ts
+
 @Injectable()
 export class UserService {
-  constructor(
-    private readonly errorFactoryService: ErrorFactoryService<AppErrorEnums>,
-  ) {
+  constructor( private readonly errorFactoryService: ErrorFactoryService ) {
   }
 
   verify(user: User): void {
@@ -170,6 +178,8 @@ export class UserService {
   }
 }
 ```
+
+An explicit `ErrorFactoryService<SomeNarrowerEnum>` still works and overrides the registry.
 
 **Wrapping downstream (axios) failures.** `fromAxiosError` maps an `AxiosError` to the right exception:
 
@@ -407,7 +417,6 @@ export class FormRepository implements IHasErrorFactoryService {
 | Export                                                          | Kind              | Purpose                                                                                |
 |------------------------------------------------------------------|-------------------|-----------------------------------------------------------------------------------------|
 | `NestLoggingModule`                                             | module            | `forRoot({ alertReporting })`; provides + globally exports the error factory service   |
-| `ErrorFactoryService<T>`                                        | injectable        | exception factory, generic over the enum union                                         |
 | `LineLoggerSubservice`                                          | class             | logfmt `LoggerService`                                                                 |
 | `ErrorFilter`, `HttpExceptionFilter`                            | filters           | global exception handling                                                              |
 | `AppLoggerMiddleware`                                           | middleware        | request/response logging + log/response split                                          |
@@ -420,6 +429,7 @@ export class FormRepository implements IHasErrorFactoryService {
 | `SanitizationModule`                                            | module            | `forRoot({ redactors, allowShape, onDisallowed })`; provides + globally exports both services below |
 | `ErrorFilter`, `HttpExceptionFilter`, `UnknownExceptionFilter`  | filters           | global exception handling                                                                           |
 | `emailRedactor`, `birthNumberRedactor`                          | `Redactor`        | built-in redactors, ready to pass to `SanitizationModule.forRoot({redactors})`                      |
+| `ErrorFactoryService<T>`, `LogNestErrorEnumRegistry`            | injectable / type | exception factory, generic over the enum union; registry for the no-generic default                 |
 
 ## Developing and running tests
 
