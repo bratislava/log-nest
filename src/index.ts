@@ -18,7 +18,10 @@ export {
 } from './sanitization/sanitization.module'
 export { SanitizeMetadataInterceptor } from './sanitization/sanitize-metadata.interceptor'
 export type { AllowShape } from './sanitization/types/allow-list.types'
-export type { Redactor, SanitizeMetadata } from './sanitization/types/redaction.types'
+export type {
+  Redactor,
+  SanitizeMetadata,
+} from './sanitization/types/redaction.types'
 
 // Errors
 export { ErrorEnum, ErrorResponseEnum } from './errors/base-errors.enum'
