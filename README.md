@@ -91,14 +91,20 @@ import {
   ErrorFilter,
   HttpExceptionFilter,
   LineLoggerSubservice,
+  UnknownExceptionFilter,
 } from '@bratislava/log-nest'
 
 const app = await NestFactory.create(AppModule, {
   logger: new LineLoggerSubservice(),
 })
-// Order matters: later filters take precedence, and HttpException extends 
-// Error. Swap these and ErrorFilter would swallow HttpExceptions too.
-app.useGlobalFilters(new ErrorFilter(), new HttpExceptionFilter())
+// Order matters: later filters take precedence, and HttpException extends
+// Error. Swap ErrorFilter/HttpExceptionFilter and ErrorFilter would swallow
+// HttpExceptions too.
+app.useGlobalFilters(
+  new UnknownExceptionFilter(),
+  new ErrorFilter(),
+  new HttpExceptionFilter(),
+)
 await app.listen(3000)
 ```
 
@@ -403,6 +409,7 @@ export class FormRepository implements IHasErrorFactoryService {
 | `HandleErrors`, `CatchDatabaseError`, `IHasErrorFactoryService` | decorators / type | error-handling decorators                                                              |
 | `Redact`, `AllowList`                                           | decorators        | per-route redaction / allowlist filtering, additive over the global config             |
 | `SanitizationModule`                                            | module            | `forRoot({ redactors, allowShape, onDisallowed })`; provides + globally exports both services below |
+| `ErrorFilter`, `HttpExceptionFilter`, `UnknownExceptionFilter`  | filters           | global exception handling                                                                           |
 
 ## Developing and running tests
 
