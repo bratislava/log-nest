@@ -47,7 +47,7 @@ function mergeAllowShapesInternal(
 }
 
 /** Placeholder `filterByShape` writes in place of a disallowed value when `onDisallowed: 'redact'`. */
-export const REDACTED_VALUE = '[redacted]'
+export const REDACTED_VALUE = '[REDACTED]'
 
 export interface FilterByShapeOptions {
   /**
