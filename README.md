@@ -22,8 +22,7 @@ Everything else follows from that:
 
 - `LineLoggerSubservice` formats every log call, including stack traces, as a single logfmt line.
 - `ErrorFactoryService` builds exceptions that carry structured metadata: a machine-readable `errorName` for querying,
-  an
-  `alert` flag for Grafana alerting, and log-only context the client must never see.
+  an `alert` flag for Grafana alerting, and log-only context the client must never see.
 - The exception filters and `AppLoggerMiddleware` cooperate to split each error into its two audiences: the sanitized
   JSON response goes to the client, while the full picture (cause chain, `console` context, stack) goes to the log.
 - Code running outside the request-handling chain (cron jobs, startup tasks, event handlers) is covered too: the
@@ -44,7 +43,7 @@ separate file, it doubles as the app's single overview of which errors alert:
 
 ```ts
 // alert-reporting.ts
-import { ErrorEnum } from '@bratislava/log-nest'
+import {ErrorEnum} from '@bratislava/log-nest'
 
 export const alertReporting: readonly string[] = [
   ErrorEnum.BAD_GATEWAY_AUTH_ERROR,
@@ -55,13 +54,20 @@ export const alertReporting: readonly string[] = [
 
 ```ts
 // app.module.ts
-import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common'
-import { AppLoggerMiddleware, NestLoggingModule } from '@bratislava/log-nest'
+import {MiddlewareConsumer, Module, NestModule} from '@nestjs/common'
+import {
+  AppLoggerMiddleware,
+  NestLoggingModule,
+  SanitizationModule,
+} from '@bratislava/log-nest'
 
-import { alertReporting } from './alert-reporting'
+import {alertReporting} from './alert-reporting'
 
 @Module({
-  imports: [NestLoggingModule.forRoot({ alertReporting })],
+  imports: [
+    NestLoggingModule.forRoot({alertReporting}),
+    SanitizationModule.forRoot(), // registers redactors + the allowlist for @Redact/@AllowList
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
@@ -70,23 +76,33 @@ export class AppModule implements NestModule {
 }
 ```
 
+`AppLoggerMiddleware` depends on both `RedactionService` and `AllowListService`, so `SanitizationModule.forRoot()` must
+be imported even if you don't configure any redactors or allowlist yet. Omitting `allowShape` denies by default: nothing
+is logged until an `allowShape` here or a per-route `@AllowList` explicitly allows it.
+
 Then wire the logger and the global exception filters in `main.ts`:
 
 ```ts
 // main.ts
-import { NestFactory } from '@nestjs/core'
+import {NestFactory} from '@nestjs/core'
 import {
   ErrorFilter,
   HttpExceptionFilter,
   LineLoggerSubservice,
+  UnknownExceptionFilter,
 } from '@bratislava/log-nest'
 
 const app = await NestFactory.create(AppModule, {
   logger: new LineLoggerSubservice(),
 })
-// Order matters: later filters take precedence, and HttpException extends 
-// Error. Swap these and ErrorFilter would swallow HttpExceptions too.
-app.useGlobalFilters(new ErrorFilter(), new HttpExceptionFilter())
+// Order matters: later filters take precedence, and HttpException extends
+// Error. Swap ErrorFilter/HttpExceptionFilter and ErrorFilter would swallow
+// HttpExceptions too.
+app.useGlobalFilters(
+  new UnknownExceptionFilter(),
+  new ErrorFilter(),
+  new HttpExceptionFilter(),
+)
 await app.listen(3000)
 ```
 
@@ -110,7 +126,7 @@ export class FormsService {
       throw this.errorFactoryService.NotFoundException({
         errorEnum: ErrorEnum.NOT_FOUND_ERROR,
         message: 'Form not found.', // sent to the client
-        console: { formId: id },    // logged only, stripped from the response
+        console: {formId: id},    // logged only, stripped from the response
       })
     }
     return form
@@ -125,21 +141,29 @@ export class FormsService {
 - `ErrorResponseEnum` holds a default client-facing message for every base error code, so the common idiom is pairing
   the two: `errorEnum: ErrorEnum.NOT_FOUND_ERROR, message: ErrorResponseEnum.NOT_FOUND_ERROR`.
 
-**App-specific error enums.** The error factory service is generic over the enum union, so extend the base `ErrorEnum`
-with your own and keep type safety:
+**App-specific error enums.** The error factory service is generic over the enum union. Register your app's union once
+via declaration merging, and every bare `ErrorFactoryService` injection (no generic) is typed with it automatically:
 
 ```ts
+// types.d.ts (anywhere loaded by tsc, e.g. next to main.ts)
 enum UserErrorEnum {
   USER_NOT_VERIFIED = 'USER_NOT_VERIFIED',
 }
 
 type AppErrorEnums = ErrorEnum | UserErrorEnum
 
+declare module '@bratislava/log-nest' {
+  interface LogNestErrorEnumRegistry {
+    errorEnum: AppErrorEnums
+  }
+}
+```
+
+```ts
+
 @Injectable()
 export class UserService {
-  constructor(
-    private readonly errorFactoryService: ErrorFactoryService<AppErrorEnums>,
-  ) {
+  constructor(private readonly errorFactoryService: ErrorFactoryService) {
   }
 
   verify(user: User): void {
@@ -152,6 +176,9 @@ export class UserService {
   }
 }
 ```
+
+An explicit `ErrorFactoryService<SomeNarrowerEnum>` still works and overrides the registry. Use it if you'd rather not
+declare a global registry augmentation at all.
 
 **Wrapping downstream (axios) failures.** `fromAxiosError` maps an `AxiosError` to the right exception:
 
@@ -169,7 +196,7 @@ try {
   if (isAxiosError(error)) {
     throw this.errorFactoryService.fromAxiosError(error, {
       message: 'Document service request failed.',
-      console: { documentId: id },
+      console: {documentId: id},
       statusOverrides: {
         // downstream 404 -> our 404 instead of the default 502
         404: {
@@ -196,7 +223,7 @@ export class FormsService {
   private readonly logger = new LineLoggerSubservice(FormsService.name)
 
   create(form: Form): void {
-    this.logger.log('Form created', { formId: form.id, slug: form.slug })
+    this.logger.log('Form created', {formId: form.id, slug: form.slug})
     // process="[Nest]" processPID="42" datetime="…" severity="LOG" 
     // context="FormsService" message="Form created" formId="…" slug="…"
   }
@@ -208,9 +235,10 @@ also exported for direct use:
 `toLogfmt(value)`, `errorToLogfmt(error)`, and `escapeForLogfmt(string)`.
 
 **Auto-named via DI.** Instead of passing `ClassName.name` yourself, inject `LineLoggerSubservice` as a constructor
-dependency of any `@Injectable()` class and it derives its context from that class automatically:
+dependency of any `@Injectable()` class, and it derives its context from that class automatically:
 
 ```ts
+
 @Injectable()
 export class FormsService {
   constructor(private readonly logger: LineLoggerSubservice) {
@@ -222,16 +250,16 @@ export class FormsService {
 }
 ```
 
-This only works when Nest constructs the class through its own DI container — a class built manually via a custom
+This only works when Nest constructs the class through its own DI container. A class built manually via a custom
 `useFactory` provider won't get a meaningful context this way, so keep using `new LineLoggerSubservice(ClassName.name)`
 there.
 
-Two details worth knowing:
+Two details are worth knowing:
 
-- The second constructor parameter disables ANSI colors: `new LineLoggerSubservice(context, false)`. By default every
+- The second constructor parameter disables ANSI colors: `new LineLoggerSubservice(context, false)`. By default, every
   line is wrapped in color escape codes.
-- When serializing an object, the `console` field is flattened: its sub-fields become top-level logfmt pairs on the
-  line, so name them as you want to query them in Loki.
+- When serializing an object, the `console` field is flattened: its subfields become top-level logfmt pairs on the line,
+  so name them as you want to query them in Loki.
 
 ### Request logging: `AppLoggerMiddleware`
 
@@ -254,12 +282,112 @@ The middleware emits one logfmt line per handled request, containing
 `message`) while the log-only metadata (`alert`, `console`, cause chain, stack) ends up on the log line. This is how
 `console` and `error` from [`ErrorFactoryService`](#throwing-errors-errorfactoryservice) stay log-only.
 
-> [!WARNING]
-> The **entire request body is logged verbatim**. Until redacting/allowlist filtering lands in this package, do not
-> send secrets or sensitive personal data to endpoints logged by this middleware.
+> [!NOTE]
+> With no `allowShape` configured anywhere, **nothing ends up in `request-body`/`response-data`**. The app-wide default
+denies everything until something allows it. A per-route `@AllowList(...)` (below) is enough on its own to allow that
+route's fields, with no `SanitizationModule.forRoot({allowShape})` baseline required. That baseline is still the only
+lever for anything that never reaches a handler (guard rejections, 404s), since there's no per-route decorator to fall
+back on there. Either way, `@AllowList(...)` only ever *widens* whatever baseline is set globally, never narrows it.
 
 Also note that `userId` is best-effort: the JWT payload from the `Authorization` header is decoded **without signature
 verification**, purely for log correlation. Never treat it as authenticated.
+
+### Filtering logged data: `@AllowList`
+
+> [!WARNING]
+> `@AllowList`/`@Redact` are not a silver bullet - they only ever filter `request-body`/`response-data`. Every other
+> field on the line (`method`, `originalUrl`, `userAgent`, `ip`, `userId`, `statusCode`, `responseTime`) is logged
+> verbatim, always, with no filtering or redaction applied. In particular:
+>
+> - **`originalUrl` includes the full path and query string, unfiltered.** Don't put anything sensitive there (a
+>   route like `/reset-password/:token`) - URLs get logged by browsers, proxies, and routers everywhere regardless of
+>   this library, so that's a rule worth following independently of it.
+> - **`userId` is only as safe as the JWT's `sub` claim.** Logging it is normally fine (it's pseudonymous - useless
+>   without separate access to the user database), but only if `sub` is genuinely an opaque ID, not something
+>   directly identifying like an email.
+> - **Manual logging is entirely out of scope.** `console`/`error` passed to `ErrorFactoryService`, and any direct
+>   `LineLoggerSubservice`/`logger.log(...)` call anywhere in your app, are programmer-supplied content this package
+>   never inspects. Don't log PII there directly.
+>
+> This package gives you a deliberate, targeted way to log more of `request-body`/`response-data` while staying
+> safe - not a blanket PII scrubber for everything your app logs.
+
+`@AllowList(shape)` restricts which keys of `request-body`/`response-data` `AppLoggerMiddleware` is allowed to log, on
+top of the app-wide default from `SanitizationModule.forRoot({allowShape})`. A shape is a tree: `true` keeps a whole
+subtree as-is, and a nested object recurses key-by-key. Anything not mentioned is dropped. Each level only ever
+**widens** what's allowed; an endpoint or controller can't narrow the app-wide default below what it already allows.
+
+```ts
+
+@Controller('users')
+@AllowList({id: true}) // controller level: every endpoint here may at least log `id`
+export class UserController {
+  @Get(':id')
+  @AllowList({email: true}) // endpoint level: adds `email` on top of the controller's `id`
+  async getUser(@Param('id') id: string): Promise<User> {
+    return this.userService.findById(id)
+    // logged response-data: { id, email } - every other field is dropped
+  }
+}
+```
+
+`@AllowList` works on both methods (endpoint level) and classes (controller level, applied to every method on the
+class).
+
+By default, a disallowed key is **omitted** entirely. Pass `onDisallowed: 'redact'` to `SanitizationModule.forRoot()`
+to keep the key but replace its value with a fixed placeholder instead - useful when you'd rather see that a field
+existed than have it silently disappear:
+
+```ts
+SanitizationModule.forRoot({allowShape: {id: true}, onDisallowed: 'redact'})
+```
+
+```
+// { id: 1, secret: 'shh' } logs as:
+response-data="{\"id\":\"1\",\"secret\":\"[REDACTED]\"}"
+```
+
+### Redacting logged data: `@Redact`
+
+Where `@AllowList` is *structural* (which keys survive at all), `@Redact` is *content-based*: it masks matching patterns
+(emails, IDs, ...) inside whatever `@AllowList` leaves behind, on the resulting value's string leaves. Register named
+redactors once via `SanitizationModule.forRoot({redactors})`, then reference them by name. `emailRedactor` and
+`birthNumberRedactor` (Slovak "rodné číslo") ship built in:
+
+```ts
+// app.module.ts
+import {emailRedactor, birthNumberRedactor} from '@bratislava/log-nest'
+
+SanitizationModule.forRoot({redactors: [emailRedactor, birthNumberRedactor]}) // global: applied to every request/response
+```
+
+Writing your own is the same `{name, redact}` shape:
+
+```ts
+import {Redactor} from '@bratislava/log-nest'
+
+export const ipRedactor: Redactor = {
+  name: 'ip',
+  redact: (line) => line.replaceAll(/\b\d{1,3}(\.\d{1,3}){3}\b/g, '<ip>'),
+}
+```
+
+```ts
+
+@Controller('users')
+export class UserController {
+  @Get(':id')
+  @Redact('email') // extra, endpoint-specific redactor on top of the global set, by name
+  async getUser(@Param('id') id: string): Promise<User> {
+    return this.userService.findById(id)
+  }
+}
+```
+
+Like `@AllowList`, it's additive across the global/endpoint levels, and runs independently of allowlist filtering:
+
+- allowlist decides *which keys* are logged,
+- redaction decides *what's left visible inside them*.
 
 ### Decorators
 
@@ -293,23 +421,28 @@ export class FormRepository implements IHasErrorFactoryService {
 
   @CatchDatabaseError()
   async findForm(id: string): Promise<Form> {
-    return this.prisma.form.findUniqueOrThrow({ where: { id } })
+    return this.prisma.form.findUniqueOrThrow({where: {id}})
   }
 }
 ```
 
 ## Exports
 
-| Export                                                          | Kind              | Purpose                                                                              |
-|-----------------------------------------------------------------|-------------------|--------------------------------------------------------------------------------------|
-| `NestLoggingModule`                                             | module            | `forRoot({ alertReporting })`; provides + globally exports the error factory service |
-| `ErrorFactoryService<T>`                                        | injectable        | exception factory, generic over the enum union                                       |
-| `LineLoggerSubservice`                                          | class             | logfmt `LoggerService`                                                               |
-| `ErrorFilter`, `HttpExceptionFilter`                            | filters           | global exception handling                                                            |
-| `AppLoggerMiddleware`                                           | middleware        | request/response logging + log/response split                                        |
-| `ErrorEnum`, `ErrorResponseEnum`                                | enums             | shared base error codes + messages                                                   |
-| `toLogfmt`, `errorToLogfmt`, `escapeForLogfmt`                  | functions         | logfmt helpers                                                                       |
-| `HandleErrors`, `CatchDatabaseError`, `IHasErrorFactoryService` | decorators / type | error-handling decorators                                                            |
+| Export                                                          | Kind              | Purpose                                                                                             |
+|-----------------------------------------------------------------|-------------------|-----------------------------------------------------------------------------------------------------|
+| `NestLoggingModule`                                             | module            | `forRoot({ alertReporting })`; provides + globally exports the error factory service                |
+| `ErrorFactoryService<T>`, `LogNestErrorEnumRegistry`            | injectable / type | exception factory, generic over the enum union; registry for the no-generic default                 |
+| `LineLoggerSubservice`                                          | class             | logfmt `LoggerService`                                                                              |
+| `ErrorFilter`, `HttpExceptionFilter`, `UnknownExceptionFilter`  | filters           | global exception handling                                                                           |
+| `AppLoggerMiddleware`                                           | middleware        | request/response logging + log/response split                                                       |
+| `SanitizationModule`                                            | module            | `forRoot({ redactors, allowShape, onDisallowed })`; provides + globally exports both services below |
+| `RedactionService`, `Redactor`                                  | class / type      | content-based redaction, by name                                                                    |
+| `emailRedactor`, `birthNumberRedactor`                          | `Redactor`        | built-in redactors, ready to pass to `SanitizationModule.forRoot({redactors})`                      |
+| `AllowListService`, `AllowShape`                                | class / type      | structural key filtering for logged data                                                            |
+| `ErrorEnum`, `ErrorResponseEnum`                                | enums             | shared base error codes + messages                                                                  |
+| `toLogfmt`, `errorToLogfmt`, `escapeForLogfmt`                  | functions         | logfmt helpers                                                                                      |
+| `HandleErrors`, `CatchDatabaseError`, `IHasErrorFactoryService` | decorators / type | error-handling decorators                                                                           |
+| `Redact`, `AllowList`                                           | decorators        | per-route redaction / allowlist filtering, additive over the global config                          |
 
 ## Developing and running tests
 

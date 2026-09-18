@@ -1,10 +1,5 @@
 import { HttpException } from '@nestjs/common'
 
-import { errorTypeKeys, errorTypeStrings } from '../errors/error-symbols'
-
-/** Length of the `$Symbol-` prefix used by {@link errorTypeStrings}. */
-const SYMBOL_PREFIX_LENGTH = '$Symbol-'.length
-
 /**
  * Escapes occurrences of the `"` and `\` characters in input string for logfmt compatibility
  * The function also replaces newline symbols with the "\n" (new line) string.
@@ -33,11 +28,9 @@ function formatValue(value: unknown): string {
 }
 
 /**
- * Separates log data from an object
- *
- * Splits an object into two. Keys that are a `Symbol` (with a description) or start with `$Symbol-`
- * will be put in one object and keys that are a string will be put in another. Keys with symbol as
- * a key will be replaced by their descriptions.
+ * Splits an object's own Symbol-keyed properties (with a description) from
+ * its string-keyed ones: `responseLog` gets the former, keyed by each
+ * symbol's description; `responseMessage` gets the latter, as-is.
  */
 export function separateLogFromResponseObj(obj: object): {
   responseLog: Record<string, unknown>
@@ -48,14 +41,8 @@ export function separateLogFromResponseObj(obj: object): {
   const record = obj as Record<string | symbol, unknown>
 
   Object.getOwnPropertyNames(obj).forEach((keyStr) => {
-    if (errorTypeStrings.includes(keyStr)) {
-      // keys derive from object introspection and target a fresh object
-      // eslint-disable-next-line security/detect-object-injection
-      responseLog[keyStr.slice(SYMBOL_PREFIX_LENGTH)] = record[keyStr]
-    } else {
-      // eslint-disable-next-line security/detect-object-injection
-      responseMessage[keyStr] = record[keyStr]
-    }
+    // eslint-disable-next-line security/detect-object-injection
+    responseMessage[keyStr] = record[keyStr]
   })
 
   Object.getOwnPropertySymbols(obj).forEach((symbol) => {
@@ -180,26 +167,4 @@ export function toLogfmt(input: unknown): string {
 
   // eslint-disable-next-line @typescript-eslint/no-base-to-string
   return `message="${escapeForLogfmt(input.toString())}"`
-}
-
-/**
- * Converts keys in an object, that are `Symbol` into strings that start with '$Symbol-'
- */
-export function symbolKeysToStrings(obj: object): Record<string, unknown> {
-  const response: Record<string, unknown> = { ...obj }
-  const record = obj as Record<symbol, unknown>
-
-  Object.getOwnPropertySymbols(obj).forEach((symbol) => {
-    const { description } = symbol
-    if (description && description in errorTypeKeys) {
-      // eslint-disable-next-line security/detect-object-injection
-      const encodedKey = errorTypeKeys[description]
-      if (encodedKey) {
-        // eslint-disable-next-line security/detect-object-injection
-        response[encodedKey] = record[symbol]
-      }
-    }
-  })
-
-  return response
 }

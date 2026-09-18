@@ -2,7 +2,7 @@
  * A single entry for {@link FromAxiosErrorOptions.statusOverrides}, selected by
  * the *downstream* response status (the map key). Note the map key and this
  * `status` are distinct: the key is the downstream status matched against, while
- * `status` is the status the *produced* exception carries — they may differ
+ * `status` is the status the *produced* exception carries; they may differ
  * (e.g. match a downstream `404` but emit a `502`).
  *
  * @property status the HTTP status the produced exception will carry.
