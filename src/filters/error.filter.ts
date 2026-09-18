@@ -101,3 +101,42 @@ export class HttpExceptionFilter implements ExceptionFilter {
     )
   }
 }
+
+/**
+ * Catches anything `ErrorFilter`/`HttpExceptionFilter` don't: a value thrown
+ * that isn't an `Error` or `HttpException` at all (a string, a plain object,
+ * ...). Without this, such a throw still resolves the request safely (Nest's
+ * own default handler takes over), but produces a log line with no
+ * `errorType`/diagnostic info whatsoever - nothing to debug from.
+ *
+ * `@Catch()` with no arguments matches every exception, so this MUST be
+ * registered FIRST in `useGlobalFilters(...)`: Nest internally reverses
+ * global filters before matching (`RouterExceptionFilters.create()` calls
+ * `filters.reverse()`), so the filter registered first is actually checked
+ * last - i.e. only used as a fallback once every other filter's type has
+ * been tried and failed to match.
+ */
+@Catch()
+export class UnknownExceptionFilter implements ExceptionFilter {
+  catch(exception: unknown, host: ArgumentsHost): void {
+    rethrowIfNotHttp(host, exception, UnknownExceptionFilter.name)
+
+    const errorType =
+      typeof exception === 'object' && exception !== null
+        ? exception.constructor.name
+        : `UnexpectedErrorType: ${typeof exception}`
+
+    respondOrLog(
+      host,
+      exception,
+      UnknownExceptionFilter.name,
+      HttpStatus.INTERNAL_SERVER_ERROR,
+      {
+        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+        message: 'Internal server error',
+      },
+      errorType,
+      undefined,
+    )
+  }
+}
