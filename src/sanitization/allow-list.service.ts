@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common'
 
-import { filterByShape, mergeAllowShapes } from './allow-list.util'
+import {
+  filterByShape,
+  FilterByShapeOptions,
+  mergeAllowShapes,
+} from './allow-list.util'
 import { AllowShape } from './types/allow-list.types'
 
 @Injectable()
@@ -12,8 +16,18 @@ export class AllowListService {
    */
   private globalShape: AllowShape = {}
 
+  /**
+   * App-wide default, set via `SanitizationModule.forRoot()`. Defaults to
+   * `'omit'`, dropping disallowed keys/values entirely.
+   */
+  private onDisallowed: FilterByShapeOptions['onDisallowed'] = 'omit'
+
   setGlobalShape(shape: AllowShape): void {
     this.globalShape = shape
+  }
+
+  setOnDisallowed(onDisallowed: FilterByShapeOptions['onDisallowed']): void {
+    this.onDisallowed = onDisallowed
   }
 
   filter(routeShape: AllowShape | undefined, value: unknown): unknown {
@@ -22,6 +36,7 @@ export class AllowListService {
         ? mergeAllowShapes(this.globalShape, routeShape)
         : this.globalShape,
       value,
+      { onDisallowed: this.onDisallowed },
     )
   }
 }

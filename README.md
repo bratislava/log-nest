@@ -298,8 +298,20 @@ export class UserController {
 ```
 
 `@AllowList` works on both methods (endpoint level) and classes (controller level, applied to every method on the
-class). It uses the same wrap-and-stash mechanism as [`@Redact`](#redacting-logged-data-redact): no
-`Reflector`/`ExecutionContext` involved, since `AppLoggerMiddleware` is plain middleware and has none to read from.
+class).
+
+By default, a disallowed key is **omitted** entirely. Pass `onDisallowed: 'redact'` to `SanitizationModule.forRoot()`
+to keep the key but replace its value with a fixed placeholder instead - useful when you'd rather see that a field
+existed than have it silently disappear:
+
+```ts
+SanitizationModule.forRoot({allowShape: {id: true}, onDisallowed: 'redact'})
+```
+
+```
+// { id: 1, secret: 'shh' } logs as:
+response-data="{\"id\":\"1\",\"secret\":\"[REDACTED]\"}"
+```
 
 ### Redacting logged data: `@Redact`
 
@@ -384,13 +396,13 @@ export class FormRepository implements IHasErrorFactoryService {
 | `LineLoggerSubservice`                                          | class             | logfmt `LoggerService`                                                                 |
 | `ErrorFilter`, `HttpExceptionFilter`                            | filters           | global exception handling                                                              |
 | `AppLoggerMiddleware`                                           | middleware        | request/response logging + log/response split                                          |
-| `SanitizationModule`                                            | module            | `forRoot({ redactors, allowShape })`; provides + globally exports both services below   |
 | `RedactionService`, `Redactor`                                  | class / type      | content-based redaction, by name                                                       |
 | `AllowListService`, `AllowShape`                                | class / type      | structural key filtering for logged data                                               |
 | `ErrorEnum`, `ErrorResponseEnum`                                | enums             | shared base error codes + messages                                                     |
 | `toLogfmt`, `errorToLogfmt`, `escapeForLogfmt`                  | functions         | logfmt helpers                                                                         |
 | `HandleErrors`, `CatchDatabaseError`, `IHasErrorFactoryService` | decorators / type | error-handling decorators                                                              |
 | `Redact`, `AllowList`                                           | decorators        | per-route redaction / allowlist filtering, additive over the global config             |
+| `SanitizationModule`                                            | module            | `forRoot({ redactors, allowShape, onDisallowed })`; provides + globally exports both services below |
 
 ## Developing and running tests
 

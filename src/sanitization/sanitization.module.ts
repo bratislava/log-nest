@@ -2,6 +2,7 @@ import { DynamicModule, Global, Module } from '@nestjs/common'
 
 import { ErrorFactoryService } from '../errors/error-factory.service'
 import { AllowListService } from './allow-list.service'
+import { FilterByShapeOptions } from './allow-list.util'
 import { RedactionService } from './redaction.service'
 import { AllowShape } from './types/allow-list.types'
 import { Redactor } from './types/redaction.types'
@@ -21,6 +22,13 @@ export interface SanitizationOptions {
    * per-route `@AllowList`) explicitly allows it.
    */
   allowShape?: AllowShape
+  /**
+   * What a disallowed key/value becomes in the log: `'omit'` (default) drops
+   * it entirely, `'redact'` keeps its position but replaces it with a fixed
+   * placeholder - useful when you'd rather see that a field existed than
+   * have it silently disappear.
+   */
+  onDisallowed?: NonNullable<FilterByShapeOptions['onDisallowed']>
 }
 
 /**
@@ -56,6 +64,7 @@ export class SanitizationModule {
           useFactory: () => {
             const allowListService = new AllowListService()
             allowListService.setGlobalShape(options.allowShape ?? {})
+            allowListService.setOnDisallowed(options.onDisallowed ?? 'omit')
             return allowListService
           },
         },
