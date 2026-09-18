@@ -2,17 +2,25 @@ import { Injectable, NestMiddleware } from '@nestjs/common'
 import { NextFunction, Request, Response } from 'express'
 
 import { LineLoggerSubservice } from '../logging/line-logger.subservice'
-import { NEST_LOGGING_OPTIONS } from '../options'
 import { AllowListService } from '../sanitization/allow-list.service'
 import { RedactionService } from '../sanitization/redaction.service'
-import { forwardSanitizeMetadataToLocals } from '../sanitization/sanitize-metadata.util'
 import { AllowShape } from '../sanitization/types/allow-list.types'
 import { SanitizeMetadata } from '../sanitization/types/redaction.types'
 
 const SERVER_ERROR_FROM = 500
 const CLIENT_ERROR_FROM = 400
 
-type ExitData = string | object | Buffer | unknown[]
+type ExitData = string | object | Buffer | unknown[] | undefined
+
+/** Request-derived fields every `response.*` override needs for its log line. */
+interface RequestLogContext {
+  method: string
+  originalUrl: string
+  startAt: [number, number]
+  userAgent: string
+  ip: string
+  userId: string
+}
 
 @Injectable()
 export class AppLoggerMiddleware implements NestMiddleware {
@@ -24,43 +32,54 @@ export class AppLoggerMiddleware implements NestMiddleware {
   use(request: Request, response: Response, next: NextFunction): void {
     const { method, originalUrl, body, ip, userAgent, userId } =
       this.extractRequestData(request)
-    const startAt = process.hrtime()
+    const context: RequestLogContext = {
+      method,
+      originalUrl,
+      startAt: process.hrtime(),
+      userAgent,
+      ip,
+      userId,
+    }
     response.locals.middlewareUsed = 'true'
 
-    // `res.json` stringifies away the Symbol-keyed sanitize metadata before
-    // `res.send` (below) ever sees it, so lift it onto `res.locals` first.
-    const { json } = response
-    response.json = (jsonBody: ExitData) => {
-      forwardSanitizeMetadataToLocals(response.locals, jsonBody)
-      response.json = json
-      return response.json(jsonBody)
-    }
+    this.installSendOverride(response, context, body)
+    this.installRedirectOverride(response, context, body)
 
+    next()
+  }
+
+  private installSendOverride(
+    response: Response,
+    context: RequestLogContext,
+    body: unknown,
+  ): void {
     const { send } = response
-    response.send = (exitData: ExitData) => {
+    response.send = (exitData?: ExitData) => {
       response.locals.middlewareUsed = undefined
 
-      const loggingOptions = this.readAndClearSanitizeMetadata(
-        response,
-        exitData,
-      )
+      // `SanitizeMetadataInterceptor` wrote this before the handler ran, if
+      // `@AllowList`/`@Redact` applied to it - independent of `exitData`,
+      // which by now might be the stringified body, not the original value.
+      const loggingOptions = response.locals.sanitizeMetadata as
+        SanitizeMetadata | undefined
+      response.locals.sanitizeMetadata = undefined
       const redactorNames = loggingOptions?.redactorNames ?? []
       const allowShape = loggingOptions?.allowShape
 
-      const { responseValue, returnExitData } = this.parseExitData(
-        response,
-        exitData,
-        loggingOptions,
-      )
+      const responseValue = this.parseExitData(response, exitData)
       const redactedResponseValue = this.sanitize(
         redactorNames,
         allowShape,
         responseValue,
       )
+
+      const stringifiedResponseValue: unknown = JSON.stringify(
+        redactedResponseValue,
+      )
       const responseLogData =
         typeof redactedResponseValue === 'string'
           ? redactedResponseValue
-          : JSON.stringify(redactedResponseValue)
+          : ((stringifiedResponseValue as string | undefined) ?? '')
 
       // `error.filter.ts` parks log-only fields (errorType, stack, alert,
       // console, ...) here, since they never belong in the client-facing body.
@@ -68,50 +87,56 @@ export class AppLoggerMiddleware implements NestMiddleware {
         Record<string, unknown> | undefined
       response.locals.errorLogData = undefined
 
-      const logger = new LineLoggerSubservice(response.statusMessage)
-
-      const diff = process.hrtime(startAt)
-      const responseTime = diff[0] * 1e3 + diff[1] * 1e-6
-      const logObj: Record<string, string | number> = {
-        test: 'true',
-        method,
-        originalUrl,
-        statusCode: response.statusCode,
-        responseTime,
-        userAgent,
-        ip,
-        userId,
-        'request-body': JSON.stringify(
-          this.sanitize(redactorNames, allowShape, body),
-        ),
-        'response-data': responseLogData,
-        ...errorLogData,
-      }
-      if (response.statusCode >= SERVER_ERROR_FROM || logObj.alert === 1) {
-        logger.error(logObj)
-      } else if (response.statusCode >= CLIENT_ERROR_FROM) {
-        logger.warn(logObj)
-      } else {
-        logger.log(logObj)
-      }
-
-      // The handler returned a primitive; `@AllowList`/`@Redact` boxed it so Nest
-      // sent it through `res.json`, which set `Content-Type: application/json`.
-      // Now that it's unboxed, drop that header so `res.send` re-infers the type
-      // for the bare value: what Nest would have sent without the decorator.
-      const returnExitValue: unknown = returnExitData
-      if (
-        loggingOptions?.valueIsNotObject &&
-        (typeof returnExitValue !== 'object' || returnExitValue === null)
-      ) {
-        response.removeHeader('content-type')
-      }
+      this.logExit(
+        response,
+        context,
+        this.sanitizeToJson(redactorNames, allowShape, body),
+        responseLogData,
+        errorLogData,
+      )
 
       response.send = send
-      return response.send(returnExitData)
+      return response.send(exitData)
     }
+  }
 
-    next()
+  /**
+   * `res.redirect()` calls `res.end()` directly, bypassing `send` above.
+   * Delegates first, then reads status/Location back off `response` (works
+   * for both call arities).
+   */
+  private installRedirectOverride(
+    response: Response,
+    context: RequestLogContext,
+    body: unknown,
+  ): void {
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- called via .apply(response, ...) below, so `this` is bound explicitly
+    const { redirect } = response
+    response.redirect = (...args: unknown[]) => {
+      response.redirect = redirect
+      ;(redirect as (...args: unknown[]) => void).apply(response, args)
+      response.locals.middlewareUsed = undefined
+
+      const loggingOptions = response.locals.sanitizeMetadata as
+        SanitizeMetadata | undefined
+      response.locals.sanitizeMetadata = undefined
+      const redactorNames = loggingOptions?.redactorNames ?? []
+      const allowShape = loggingOptions?.allowShape
+
+      const url = response.getHeader('Location')?.toString() ?? ''
+
+      this.logExit(
+        response,
+        context,
+        this.sanitizeToJson(redactorNames, allowShape, body),
+        // `url` is a bare string, not a keyed object - `allowShape` only
+        // ever describes structure to recurse into, so it can't sensibly
+        // apply here; only content-based `@Redact` can act on it.
+        this.sanitize(redactorNames, true, url) as string,
+      )
+
+      return response
+    }
   }
 
   private extractRequestData(request: Request): {
@@ -154,86 +179,85 @@ export class AppLoggerMiddleware implements NestMiddleware {
     return this.redactionService.redact(redactorNames, filtered)
   }
 
-  /**
-   * Tries `exitData`'s own symbol first, falling back to `res.locals`
-   * (single-use, always cleared after).
-   */
-  private readAndClearSanitizeMetadata(
-    response: Response,
-    exitData: ExitData,
-  ): SanitizeMetadata | undefined {
-    const meta =
-      this.extractLoggingOptions(exitData) ??
-      (response.locals.sanitizeMetadata as SanitizeMetadata | undefined)
-    response.locals.sanitizeMetadata = undefined
-    return meta
+  private sanitizeToJson(
+    redactorNames: readonly string[],
+    allowShape: AllowShape | undefined,
+    value: unknown,
+  ): string {
+    return JSON.stringify(this.sanitize(redactorNames, allowShape, value))
   }
 
-  /**
-   * Reads `@Redact`'s `{ valueIsNotObject?, redactors? }` metadata directly
-   * off `exitData` by its actual Symbol key. `@Redact` attaches this to any
-   * object-typed return value (including arrays and Buffers, since those are
-   * `typeof 'object'` too), not only the plain-object case `parseExitData`
-   * mainly deals with, so this must run before any branch decides the
-   * metadata isn't there. A string `exitData` can't carry it: symbol-keyed
-   * properties can't be attached to a primitive string value.
-   */
-  private extractLoggingOptions(
-    exitData: ExitData,
-  ): SanitizeMetadata | undefined {
-    if (typeof exitData !== 'object' || (exitData as unknown) === null) {
-      return undefined
+  private buildBaseLogObj(
+    context: RequestLogContext,
+  ): Record<string, string | number> {
+    const diff = process.hrtime(context.startAt)
+    const responseTime = diff[0] * 1e3 + diff[1] * 1e-6
+    return {
+      test: 'true',
+      method: context.method,
+      originalUrl: context.originalUrl,
+      responseTime,
+      userAgent: context.userAgent,
+      ip: context.ip,
+      userId: context.userId,
     }
-    return Reflect.get(exitData, NEST_LOGGING_OPTIONS) as
-      SanitizeMetadata | undefined
+  }
+
+  /** Assembles the full log line for any response exit path and emits it. */
+  private logExit(
+    response: Response,
+    context: RequestLogContext,
+    requestBodyLog: string,
+    responseDataLog: string,
+    extra?: Record<string, unknown>,
+  ): void {
+    const logger = new LineLoggerSubservice(response.statusMessage)
+    const logObj: Record<string, string | number> = {
+      ...this.buildBaseLogObj(context),
+      statusCode: response.statusCode,
+      'request-body': requestBodyLog,
+      'response-data': responseDataLog,
+      ...extra,
+    }
+    this.emitAtSeverity(logger, response.statusCode, logObj)
+  }
+
+  private emitAtSeverity(
+    logger: LineLoggerSubservice,
+    statusCode: number,
+    logObj: Record<string, string | number>,
+  ): void {
+    if (statusCode >= SERVER_ERROR_FROM || logObj.alert === 1) {
+      logger.error(logObj)
+    } else if (statusCode >= CLIENT_ERROR_FROM) {
+      logger.warn(logObj)
+    } else {
+      logger.log(logObj)
+    }
   }
 
   /**
-   * Picks apart `exitData` into the value to actually log (`responseValue`,
-   * still unsanitized - the caller runs it through `sanitize()`) and the
-   * value to send back to the client (`returnExitData`, never sanitized).
+   * `exitData` as the value to log: JSON-parsed back into an object when
+   * it's a JSON string (so `sanitize()` can filter/redact it structurally),
+   * otherwise passed through as-is. Never touches what's actually sent to
+   * the client - `exitData` itself goes to `response.send()` unchanged.
    */
-  private parseExitData(
-    response: Response,
-    exitData: ExitData,
-    loggingOptions: SanitizeMetadata | undefined,
-  ): {
-    returnExitData: typeof exitData
-    responseValue: unknown
-  } {
+  private parseExitData(response: Response, exitData: ExitData): unknown {
     if (
+      typeof exitData !== 'string' ||
       !response
         .getHeader('content-type')
         ?.toString()
         .includes('application/json')
     ) {
-      return { responseValue: exitData, returnExitData: exitData }
+      return exitData
     }
 
-    let data: unknown = exitData
-
-    // Parse string-type exitData if it is JSON
-    if (typeof exitData === 'string') {
-      try {
-        data = JSON.parse(exitData) as unknown
-      } catch {
-        // If parsing fails, assume it's a plain string
-        return { responseValue: exitData, returnExitData: exitData }
-      }
+    try {
+      return JSON.parse(exitData) as unknown
+    } catch {
+      // Not actually JSON despite the content-type header - log as-is.
+      return exitData
     }
-
-    const responseMessage = data as Record<string, unknown>
-
-    // `@Redact`/`@AllowList` mark non-object return values by wrapping them as
-    // `{ value, [NEST_LOGGING_OPTIONS] }` so the metadata had somewhere to
-    // live. Unwrap that back to the value. The metadata is read from
-    // `loggingOptions` (resolved by the caller) rather than off `exitData`,
-    // since by the time `res.json` has stringified the wrapper the Symbol key
-    // is already gone and `exitData` is a plain string.
-    const responseValue = loggingOptions?.valueIsNotObject
-      ? (responseMessage as { value: unknown }).value
-      : responseMessage
-
-    return { returnExitData: responseValue as typeof exitData, responseValue }
   }
 }

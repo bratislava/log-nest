@@ -5,7 +5,6 @@ import { PATH_METADATA } from '@nestjs/common/constants'
 
 import { AllowList } from '../allow-list.decorator'
 import { Redact } from '../redact.decorator'
-import { preserveMethodMetadata } from '../utils/preserve-method-metadata'
 
 const routeOf = (ctor: new () => unknown, key: string): unknown => {
   const proto = ctor.prototype as Record<string, object>
@@ -13,20 +12,10 @@ const routeOf = (ctor: new () => unknown, key: string): unknown => {
   return Reflect.getMetadata(PATH_METADATA, proto[key])
 }
 
-describe('preserveMethodMetadata', () => {
-  it('copies own reflect-metadata from one function onto another', () => {
-    const original = (): string => 'original'
-    const wrapper = (): string => 'wrapper'
-    Reflect.defineMetadata(PATH_METADATA, 'ping', original)
-    Reflect.defineMetadata('test:other', 42, original)
-
-    preserveMethodMetadata(original, wrapper)
-
-    expect(Reflect.getMetadata(PATH_METADATA, wrapper)).toBe('ping')
-    expect(Reflect.getMetadata('test:other', wrapper)).toBe(42)
-  })
-})
-
+// @AllowList/@Redact now attach via SetMetadata, which never touches
+// descriptor.value, so there's no method reference to lose route metadata
+// off in the first place - but this regression is cheap enough to keep an
+// explicit guard for.
 describe('route metadata survives the sanitize decorators', () => {
   it('class-level @AllowList keeps every method’s route metadata reachable', () => {
     @AllowList({ id: true })

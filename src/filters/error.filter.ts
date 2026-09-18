@@ -9,7 +9,6 @@ import { Response } from 'express'
 
 import { LineLoggerSubservice } from '../logging/line-logger.subservice'
 import { separateLogFromResponseObj } from '../logging/logfmt'
-import { forwardSanitizeMetadataToLocals } from '../sanitization/sanitize-metadata.util'
 
 function rethrowIfNotHttp(
   host: ArgumentsHost,
@@ -49,7 +48,9 @@ function respondOrLog(
   const { responseLog, responseMessage } = separateLogFromResponseObj(rawBody)
 
   if (response.locals.middlewareUsed) {
-    forwardSanitizeMetadataToLocals(response.locals, exception)
+    // `response.locals.sanitizeMetadata` was already written by
+    // SanitizeMetadataInterceptor before the handler ran, and survives a
+    // thrown error the same as a normal return - nothing to forward here.
     response.locals.errorLogData = { ...responseLog, errorType, stack }
     response.json(responseMessage)
     return
