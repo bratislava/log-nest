@@ -1,50 +1,7 @@
-import { attachSanitizeMetadata } from '../sanitization/sanitize-metadata.util'
+import { SetMetadata } from '@nestjs/common'
+
+import { ALLOW_LIST_METADATA_KEY } from '../sanitization/sanitize-metadata.keys'
 import { AllowShape } from '../sanitization/types/allow-list.types'
-import { preserveMethodMetadata } from './utils/preserve-method-metadata'
-
-function wrapMethod(
-  descriptor: PropertyDescriptor,
-  shape: AllowShape,
-): PropertyDescriptor {
-  const originalMethod: unknown = descriptor.value
-  if (typeof originalMethod !== 'function') {
-    throw new TypeError(
-      `@AllowList can only be applied to methods, got ${typeof originalMethod}`,
-    )
-  }
-  const method = originalMethod as (
-    this: unknown,
-    ...args: unknown[]
-  ) => unknown
-
-  const allowListWrapper = async function allowListWrapper(
-    this: unknown,
-    ...args: unknown[]
-  ): Promise<unknown> {
-    let result: unknown
-    try {
-      result = await method.apply(this, args)
-    } catch (error) {
-      if (typeof error === 'object' && error !== null) {
-        attachSanitizeMetadata(error, { allowShape: shape })
-      }
-      throw error
-    }
-
-    if (typeof result === 'object' && result !== null) {
-      return attachSanitizeMetadata(result, { allowShape: shape })
-    }
-    return attachSanitizeMetadata(
-      { value: result },
-      { valueIsNotObject: true, allowShape: shape },
-    )
-  }
-
-  preserveMethodMetadata(method, allowListWrapper)
-  descriptor.value = allowListWrapper
-
-  return descriptor
-}
 
 /**
  * Restricts which keys of a method's result/error may end up in
@@ -53,14 +10,15 @@ function wrapMethod(
  * allows. This only ever widens the allowlist for the decorated scope, it
  * can never narrow it below the app default.
  *
- * Usable two ways, following the same wrap-and-stash pattern as `@Redact`
- * (no `Reflector`/`ExecutionContext` involved: `AppLoggerMiddleware` is
- * plain middleware and has no execution context to read reflected metadata
- * from):
+ * Attaches the shape as reflected metadata (`SetMetadata`); it never touches
+ * the method itself. `SanitizeMetadataInterceptor` (registered globally by
+ * `SanitizationModule.forRoot()`) reads it via `Reflector`, merging
+ * controller + endpoint level, and writes the merged result to
+ * `response.locals` before the handler runs.
  *
- * - On a method (endpoint level): wraps just that method.
- * - On a class (controller level): wraps every method on its prototype the
- *   same way, so the whole controller shares the shape.
+ * - On a method (endpoint level): applies to just that method.
+ * - On a class (controller level): applies to every method on it, merged
+ *   with whatever each individually adds.
  *
  * @example
  * ```ts
@@ -71,32 +29,5 @@ function wrapMethod(
  * ```
  */
 export function AllowList(shape: AllowShape): MethodDecorator & ClassDecorator {
-  return function (
-    target: object,
-    propertyKey?: string | symbol,
-    descriptor?: PropertyDescriptor,
-  ): unknown {
-    if (propertyKey !== undefined && descriptor !== undefined) {
-      return wrapMethod(descriptor, shape)
-    }
-
-    const prototype = (target as { prototype: object }).prototype
-    for (const key of Object.getOwnPropertyNames(prototype)) {
-      if (key === 'constructor') {
-        continue
-      }
-      // key comes from Object.getOwnPropertyNames() of the class's own prototype, not user input
-       
-      const methodDescriptor = Object.getOwnPropertyDescriptor(prototype, key)
-      if (!methodDescriptor || typeof methodDescriptor.value !== 'function') {
-        continue
-      }
-      Object.defineProperty(
-        prototype,
-        key,
-        wrapMethod(methodDescriptor, shape),
-      )
-    }
-    return target
-  } as MethodDecorator & ClassDecorator
+  return SetMetadata(ALLOW_LIST_METADATA_KEY, shape)
 }

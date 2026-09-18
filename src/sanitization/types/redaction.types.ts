@@ -12,19 +12,14 @@ export interface Redactor {
 }
 
 /**
- * Shape of the metadata `@Redact`/`@AllowList` attach to a method's
- * result/error under the `NEST_LOGGING_OPTIONS` symbol key, and that
- * `AppLoggerMiddleware` reads back off it.
+ * The effective `@Redact`/`@AllowList` config for one handler (controller +
+ * endpoint level merged), written to `response.locals.sanitizeMetadata` by
+ * `SanitizeMetadataInterceptor` before the handler runs, and read back by
+ * `AppLoggerMiddleware` regardless of how the handler ends.
  */
 export interface SanitizeMetadata {
   /** Names of the redactors `@Redact(...)` was called with for this method. */
   redactorNames?: readonly string[]
   /** Shape `@AllowList(...)` was called with for this method/controller. */
   allowShape?: AllowShape
-  /**
-   * Set when the method's actual result wasn't an object: it was wrapped as
-   * `{ value, [NEST_LOGGING_OPTIONS]: { valueIsNotObject: true, ... } }` so
-   * the metadata had somewhere to live, and needs unwrapping back to `value`.
-   */
-  valueIsNotObject?: boolean
 }
