@@ -5,7 +5,7 @@ import { Injectable } from '@nestjs/common'
 import { ErrorEnum, ErrorResponseEnum } from '../errors/base-errors.enum'
 import { ErrorFactoryService } from '../errors/error-factory.service'
 import { LineLoggerSubservice } from '../logging/line-logger.subservice'
-import { Redactor } from './redaction.types'
+import { Redactor } from './types/redaction.types'
 
 type RedactedValue<T> = unknown extends T
   ? unknown
@@ -28,7 +28,7 @@ export class RedactionService {
   register(...redactors: Redactor[]) {
     redactors.forEach((redactor) => {
       if (this.redactorMap.has(redactor.name)) {
-        this.errorFactoryService.BadGatewayException({
+        throw this.errorFactoryService.BadGatewayException({
           errorEnum: ErrorEnum.DUPLICATE_REDACTOR_ERROR,
           message: ErrorResponseEnum.DUPLICATE_REDACTOR_ERROR,
         })
@@ -40,7 +40,7 @@ export class RedactionService {
   /**
    * Registers `redactors` (like {@link register}) and marks their names as
    * always-applied: every `redact()` call runs them automatically, on top of
-   * whatever names it's explicitly given — so a route doesn't need
+   * whatever names it's explicitly given, so a route doesn't need
    * `@Redact(...)` just to get the process-wide baseline. Configured via
    * `SanitizationModule.forRoot(redactors)`.
    *
@@ -56,7 +56,7 @@ export class RedactionService {
    * Runs the global redactors plus the named ones over `value`, in order,
    * each receiving the previous one's output. Strings are redacted directly;
    * arrays and plain objects are walked recursively over their values (keys
-   * are left as-is) — so the returned value keeps `value`'s shape and type.
+   * are left as-is), so the returned value keeps `value`'s shape and type.
    * Anything else (number, boolean, bigint, null, ...) has no shape to
    * preserve: it is best-effort JSON-stringified and redacted as a string
    * instead. `RedactedValue<T>` encodes exactly that split (object in gives
@@ -78,8 +78,8 @@ export class RedactionService {
    * A name with no registered redactor means configured redaction isn't
    * actually happening, so it's logged as an `UNREGISTERED_REDACTOR_ERROR`
    * (add that to `alertReporting` so it pages instead of failing silently)
-   * rather than thrown — this runs in the logging hot path and must never
-   * throw.
+   * rather than thrown, since this runs in the logging hot path and must
+   * never throw.
    */
   private applyRedactors(names: readonly string[], value: unknown): unknown {
     if (typeof value === 'string') {
