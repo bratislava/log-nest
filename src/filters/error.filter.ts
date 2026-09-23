@@ -123,7 +123,7 @@ export class UnknownExceptionFilter implements ExceptionFilter {
 
     const errorType =
       typeof exception === 'object' && exception !== null
-        ? exception.constructor.name
+        ? (exception.constructor?.name ?? 'Object: null prototype')
         : `UnexpectedErrorType: ${typeof exception}`
 
     respondOrLog(
