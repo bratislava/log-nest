@@ -123,7 +123,8 @@ export class UnknownExceptionFilter implements ExceptionFilter {
 
     const errorType =
       typeof exception === 'object' && exception !== null
-        ? (exception.constructor?.name ?? 'Object: null prototype')
+        ? // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+          (exception.constructor?.name ?? 'Object: null prototype')
         : `UnexpectedErrorType: ${typeof exception}`
 
     respondOrLog(
