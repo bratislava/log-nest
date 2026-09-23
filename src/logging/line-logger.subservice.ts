@@ -45,7 +45,7 @@ export class LineLoggerSubservice implements LoggerService {
 
   constructor(
     @Optional() @Inject(INQUIRER) contextOrInquirer?: string | object,
-    color = true,
+    @Optional() color = true,
   ) {
     this.context =
       typeof contextOrInquirer === 'string'
