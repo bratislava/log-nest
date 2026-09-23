@@ -28,7 +28,7 @@ export class RedactionService {
   register(...redactors: Redactor[]) {
     redactors.forEach((redactor) => {
       if (this.redactorMap.has(redactor.name)) {
-        this.errorFactoryService.BadGatewayException({
+        throw this.errorFactoryService.BadGatewayException({
           errorEnum: ErrorEnum.DUPLICATE_REDACTOR_ERROR,
           message: ErrorResponseEnum.DUPLICATE_REDACTOR_ERROR,
         })
