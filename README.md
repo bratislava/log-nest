@@ -437,7 +437,7 @@ export class FormRepository implements IHasErrorFactoryService {
 | `AppLoggerMiddleware`                                           | middleware        | request/response logging + log/response split                                                       |
 | `SanitizationModule`                                            | module            | `forRoot({ redactors, allowShape, onDisallowed })`; provides + globally exports both services below |
 | `RedactionService`, `Redactor`                                  | class / type      | content-based redaction, by name                                                                    |
-| `emailRedactor`, `birthNumberRedactor`                          | `Redactor`        | built-in redactors, ready to pass to `SanitizationModule.forRoot({redactors})`                      |
+| `emailRedactor`, `birthNumberRedactor`                          | redactor          | built-in redactors, ready to pass to `SanitizationModule.forRoot({redactors})`                      |
 | `AllowListService`, `AllowShape`                                | class / type      | structural key filtering for logged data                                                            |
 | `ErrorEnum`, `ErrorResponseEnum`                                | enums             | shared base error codes + messages                                                                  |
 | `toLogfmt`, `errorToLogfmt`, `escapeForLogfmt`                  | functions         | logfmt helpers                                                                                      |
