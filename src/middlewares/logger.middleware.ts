@@ -198,7 +198,6 @@ export class AppLoggerMiddleware implements NestMiddleware {
     const diff = process.hrtime(context.startAt)
     const responseTime = diff[0] * 1e3 + diff[1] * 1e-6
     return {
-      test: 'true',
       method: context.method,
       originalUrl: context.originalUrl,
       responseTime,
