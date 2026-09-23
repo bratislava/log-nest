@@ -172,7 +172,7 @@ export class AppLoggerMiddleware implements NestMiddleware {
       return payload.sub ?? '<NO USER ID>'
     } catch {
       return ''
-    }x
+    }
   }
 
   private sanitize(
