@@ -1,6 +1,6 @@
 {
   "name": "@bratislava/log-nest",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Structured logging and error handling for NestJS, with single-line logfmt output for Grafana Loki.",
   "keywords": [
     "nestjs",
