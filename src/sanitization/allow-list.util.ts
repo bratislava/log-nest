@@ -4,6 +4,14 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
+function childShape(
+  shape: Record<string, AllowShape>,
+  key: string,
+): AllowShape | undefined {
+  // eslint-disable-next-line security/detect-object-injection
+  return Object.hasOwn(shape, key) ? shape[key] : undefined
+}
+
 /**
  * Unions two shapes: since more `@AllowList` levels (app, controller,
  * endpoint) only ever widen what's logged, a key allowed by either side ends
@@ -36,8 +44,10 @@ function mergeAllowShapesInternal(
 
   const merged: Record<string, AllowShape> = {}
   for (const key of new Set([...Object.keys(a), ...Object.keys(b)])) {
-    // eslint-disable-next-line security/detect-object-injection
-    const mergedChild = mergeAllowShapesInternal(a[key], b[key])
+    const mergedChild = mergeAllowShapesInternal(
+      childShape(a, key),
+      childShape(b, key),
+    )
     if (mergedChild !== undefined) {
       // eslint-disable-next-line security/detect-object-injection
       merged[key] = mergedChild
@@ -91,8 +101,11 @@ export function filterByShape(
 
   const filtered: Record<string, unknown> = {}
   for (const [key, entryValue] of Object.entries(value)) {
-    // eslint-disable-next-line security/detect-object-injection
-    const filteredChild = filterByShape(shape[key], entryValue, options)
+    const filteredChild = filterByShape(
+      childShape(shape, key),
+      entryValue,
+      options,
+    )
     if (filteredChild !== undefined) {
       // eslint-disable-next-line security/detect-object-injection
       filtered[key] = filteredChild
