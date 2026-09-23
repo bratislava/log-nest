@@ -83,20 +83,20 @@ export function filterByShape(
     return value.map((item) => filterByShape(shape, item, options))
   }
 
-  if (isPlainRecord(value)) {
-    const filtered: Record<string, unknown> = {}
-    for (const [key, entryValue] of Object.entries(value)) {
-      // eslint-disable-next-line security/detect-object-injection
-      const filteredChild = filterByShape(shape[key], entryValue, options)
-      if (filteredChild !== undefined) {
-        // eslint-disable-next-line security/detect-object-injection
-        filtered[key] = filteredChild
-      }
-    }
-    return filtered
+  if (!isPlainRecord(value)) {
+    // Shape describes an object to recurse into, but `value` is a primitive.
+    // There's nothing further to allow, so drop it (or redact it).
+    return disallowed
   }
 
-  // Else: shape describes an object to recurse into, but `value` is a primitive.
-  // There's nothing further to allow, so drop it (or redact it).
-  return disallowed
+  const filtered: Record<string, unknown> = {}
+  for (const [key, entryValue] of Object.entries(value)) {
+    // eslint-disable-next-line security/detect-object-injection
+    const filteredChild = filterByShape(shape[key], entryValue, options)
+    if (filteredChild !== undefined) {
+      // eslint-disable-next-line security/detect-object-injection
+      filtered[key] = filteredChild
+    }
+  }
+  return filtered
 }
