@@ -152,22 +152,27 @@ export class AppLoggerMiddleware implements NestMiddleware {
     const ip = request.ip ?? '<NO IP>'
     const userAgent = request.get('user-agent') || ''
 
-    // Best-effort userId for the log line only: decode the JWT payload WITHOUT
-    // verifying its signature. Never use this for authorization.
-    let userId = ''
-    try {
-      if (request.headers.authorization) {
-        const token = request.headers.authorization.split('.')[1]
-        const tokenData = JSON.parse(
-          Buffer.from(token, 'base64').toString(),
-        ) as { sub?: string }
-        userId = tokenData.sub ?? '<NO USER ID>'
-      }
-    } catch {
-      /* empty */
-    }
+    const userId = this.decodeUserId(request.headers.authorization)
 
     return { method, originalUrl, body, ip, userAgent, userId }
+  }
+
+  /**
+   * Best-effort userId for the log line only: decode the JWT payload WITHOUT
+   * verifying its signature. Never use this for authorization.
+   */
+  decodeUserId(authorization: string | undefined): string {
+    if (!authorization) {
+      return ''
+    }
+    try {
+      const payload = JSON.parse(
+        Buffer.from(authorization.split('.')[1], 'base64').toString(),
+      ) as { sub?: string }
+      return payload.sub ?? '<NO USER ID>'
+    } catch {
+      return ''
+    }x
   }
 
   private sanitize(
