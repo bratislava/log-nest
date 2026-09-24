@@ -4,14 +4,14 @@ import { APP_INTERCEPTOR } from '@nestjs/core'
 import { ErrorFactoryService } from '../errors/error-factory.service'
 import { LogAllowListService } from './allow-list.service'
 import { FilterByShapeOptions } from './allow-list.util'
-import { RedactionService } from './redaction.service'
+import { LogRedactionService } from './log-redaction.service'
 import { SanitizeMetadataInterceptor } from './sanitize-metadata.interceptor'
 import { AllowShape } from './types/allow-list.types'
 import { LogRedactor } from './types/redaction.types'
 
 export interface SanitizationOptions {
   /**
-   * Redactors applied globally: `RedactionService.redact()` applies them to
+   * Redactors applied globally: `LogRedactionService.redact()` applies them to
    * every call automatically. Routes only need `@LogRedact(...)` for extra
    * redactors on top of that baseline, not to opt into redaction at all.
    */
@@ -34,7 +34,7 @@ export interface SanitizationOptions {
 }
 
 /**
- * Provides {@link RedactionService} and {@link LogAllowListService}
+ * Provides {@link LogRedactionService} and {@link LogAllowListService}
  * process-wide, so any module (including one that wires up
  * `AppLoggerMiddleware`) can inject them without explicitly importing this
  * module.
@@ -53,9 +53,9 @@ export class SanitizationModule {
       module: SanitizationModule,
       providers: [
         {
-          provide: RedactionService,
+          provide: LogRedactionService,
           useFactory: (errorFactoryService: ErrorFactoryService) => {
-            const redactionService = new RedactionService(errorFactoryService)
+            const redactionService = new LogRedactionService(errorFactoryService)
             redactionService.registerGlobal(...(options.redactors ?? []))
             return redactionService
           },
@@ -72,7 +72,7 @@ export class SanitizationModule {
         },
         { provide: APP_INTERCEPTOR, useClass: SanitizeMetadataInterceptor },
       ],
-      exports: [RedactionService, LogAllowListService],
+      exports: [LogRedactionService, LogAllowListService],
     }
   }
 }

@@ -15,13 +15,13 @@ type RedactedValue<T> = unknown extends T
 
 @Injectable()
 // eslint-disable-next-line @darraghor/nestjs-typed/injectable-should-be-provided
-export class RedactionService {
+export class LogRedactionService {
   private readonly redactorMap = new Map<string, LogRedactor['redact']>()
 
   /** Names merged into every `redact()` call. See {@link registerGlobal}. */
   private readonly globalNames: string[] = []
 
-  private readonly logger = new LineLoggerSubservice(RedactionService.name)
+  private readonly logger = new LineLoggerSubservice(LogRedactionService.name)
 
   constructor(private readonly errorFactoryService: ErrorFactoryService) {}
 

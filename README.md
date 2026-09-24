@@ -76,7 +76,7 @@ export class AppModule implements NestModule {
 }
 ```
 
-`AppLoggerMiddleware` depends on both `RedactionService` and `LogAllowListService`, so `SanitizationModule.forRoot()` must
+`AppLoggerMiddleware` depends on both `LogRedactionService` and `LogAllowListService`, so `SanitizationModule.forRoot()` must
 be imported even if you don't configure any redactors or allowlist yet. Omitting `allowShape` denies by default: nothing
 is logged until an `allowShape` here or a per-route `@LogAllowList` explicitly allows it.
 
@@ -436,7 +436,7 @@ export class FormRepository implements IHasErrorFactoryService {
 | `ErrorFilter`, `HttpExceptionFilter`, `UnknownExceptionFilter`  | filters           | global exception handling                                                                           |
 | `AppLoggerMiddleware`                                           | middleware        | request/response logging + log/response split                                                       |
 | `SanitizationModule`                                            | module            | `forRoot({ redactors, allowShape, onDisallowed })`; provides + globally exports both services below |
-| `RedactionService`, `LogRedactor`                                  | class / type      | content-based redaction, by name                                                                    |
+| `LogRedactionService`, `LogRedactor`                                  | class / type      | content-based redaction, by name                                                                    |
 | `emailRedactor`, `birthNumberRedactor`                          | redactor          | built-in redactors, ready to pass to `SanitizationModule.forRoot({redactors})`                      |
 | `LogAllowListService`, `AllowShape`                                | class / type      | structural key filtering for logged data                                                            |
 | `ErrorEnum`, `ErrorResponseEnum`                                | enums             | shared base error codes + messages                                                                  |

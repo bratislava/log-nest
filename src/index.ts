@@ -11,7 +11,7 @@ export {
   birthNumberRedactor,
   emailRedactor,
 } from './sanitization/default-redactors'
-export { RedactionService } from './sanitization/redaction.service'
+export { LogRedactionService } from './sanitization/log-redaction.service'
 export {
   SanitizationModule,
   type SanitizationOptions,

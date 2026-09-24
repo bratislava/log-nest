@@ -3,7 +3,7 @@ import { NextFunction, Request, Response } from 'express'
 
 import { LineLoggerSubservice } from '../logging/line-logger.subservice'
 import { LogAllowListService } from '../sanitization/allow-list.service'
-import { RedactionService } from '../sanitization/redaction.service'
+import { LogRedactionService } from '../sanitization/log-redaction.service'
 import { AllowShape } from '../sanitization/types/allow-list.types'
 import { SanitizeMetadata } from '../sanitization/types/redaction.types'
 
@@ -25,7 +25,7 @@ interface RequestLogContext {
 @Injectable()
 export class AppLoggerMiddleware implements NestMiddleware {
   constructor(
-    private readonly redactionService: RedactionService,
+    private readonly redactionService: LogRedactionService,
     private readonly logAllowListService: LogAllowListService,
   ) {}
 
