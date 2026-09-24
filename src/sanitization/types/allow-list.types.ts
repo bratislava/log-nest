@@ -4,4 +4,4 @@
  * recurses key-by-key. A key absent from the shape is dropped, whatever the
  * value at that key actually is.
  */
-export type AllowShape = true | { [key: string]: AllowShape }
+export type LogAllowShape = true | { [key: string]: LogAllowShape }

@@ -1,4 +1,4 @@
-import { Redactor } from './types/redaction.types'
+import { LogRedactor } from './types/redaction.types'
 
 /**
  * Masks email addresses. Deliberately permissive (over-matching is the safe
@@ -6,7 +6,7 @@ import { Redactor } from './types/redaction.types'
  * a false negative leaks PII), so it catches most real-world addresses
  * without the full RFC 5322 grammar.
  */
-export const emailRedactor: Redactor = {
+export const emailRedactor: LogRedactor = {
   name: 'email',
   redact: (line) =>
     line.replaceAll(
@@ -29,7 +29,7 @@ export const emailRedactor: Redactor = {
  * again favoring over-matching over a missed one. Word boundaries keep it
  * from matching a 9-10 digit substring embedded in a longer number.
  */
-export const birthNumberRedactor: Redactor = {
+export const birthNumberRedactor: LogRedactor = {
   name: 'birthNumber',
   redact: (line) =>
     line.replaceAll(/\b\d{6}\/?\d{3,4}\b/g, '[REDACTED:birthNumber]'),

@@ -5,7 +5,7 @@ import { Injectable } from '@nestjs/common'
 import { ErrorEnum, ErrorResponseEnum } from '../errors/base-errors.enum'
 import { ErrorFactoryService } from '../errors/error-factory.service'
 import { LineLoggerSubservice } from '../logging/line-logger.subservice'
-import { Redactor } from './types/redaction.types'
+import { LogRedactor } from './types/redaction.types'
 
 type RedactedValue<T> = unknown extends T
   ? unknown
@@ -15,17 +15,17 @@ type RedactedValue<T> = unknown extends T
 
 @Injectable()
 // eslint-disable-next-line @darraghor/nestjs-typed/injectable-should-be-provided
-export class RedactionService {
-  private readonly redactorMap = new Map<string, Redactor['redact']>()
+export class LogRedactionService {
+  private readonly redactorMap = new Map<string, LogRedactor['redact']>()
 
   /** Names merged into every `redact()` call. See {@link registerGlobal}. */
   private readonly globalNames: string[] = []
 
-  private readonly logger = new LineLoggerSubservice(RedactionService.name)
+  private readonly logger = new LineLoggerSubservice(LogRedactionService.name)
 
   constructor(private readonly errorFactoryService: ErrorFactoryService) {}
 
-  register(...redactors: Redactor[]) {
+  register(...redactors: LogRedactor[]) {
     redactors.forEach((redactor) => {
       if (this.redactorMap.has(redactor.name)) {
         throw this.errorFactoryService.BadGatewayException({
@@ -41,13 +41,13 @@ export class RedactionService {
    * Registers `redactors` (like {@link register}) and marks their names as
    * always-applied: every `redact()` call runs them automatically, on top of
    * whatever names it's explicitly given, so a route doesn't need
-   * `@Redact(...)` just to get the process-wide baseline. Configured via
-   * `SanitizationModule.forRoot(redactors)`.
+   * `@LogRedact(...)` just to get the process-wide baseline. Configured via
+   * `LogSanitizationModule.forRoot(redactors)`.
    *
    * Use `register()` alone for redactors that should only run when a route
-   * opts in by name via `@Redact('name')`.
+   * opts in by name via `@LogRedact('name')`.
    */
-  registerGlobal(...redactors: Redactor[]) {
+  registerGlobal(...redactors: LogRedactor[]) {
     this.register(...redactors)
     this.globalNames.push(...redactors.map((redactor) => redactor.name))
   }

@@ -1,6 +1,6 @@
-import { AllowShape } from './allow-list.types'
+import { LogAllowShape } from './allow-list.types'
 
-export interface Redactor {
+export interface LogRedactor {
   /** Unique identifier */
   name: string
 
@@ -12,14 +12,14 @@ export interface Redactor {
 }
 
 /**
- * The effective `@Redact`/`@AllowList` config for one handler (controller +
+ * The effective `@LogRedact`/`@LogAllowList` config for one handler (controller +
  * endpoint level merged), written to `response.locals.sanitizeMetadata` by
- * `SanitizeMetadataInterceptor` before the handler runs, and read back by
+ * `SanitizeLogMetadataInterceptor` before the handler runs, and read back by
  * `AppLoggerMiddleware` regardless of how the handler ends.
  */
-export interface SanitizeMetadata {
-  /** Names of the redactors `@Redact(...)` was called with for this method. */
+export interface SanitizeLogMetadata {
+  /** Names of the redactors `@LogRedact(...)` was called with for this method. */
   redactorNames?: readonly string[]
-  /** Shape `@AllowList(...)` was called with for this method/controller. */
-  allowShape?: AllowShape
+  /** Shape `@LogAllowList(...)` was called with for this method/controller. */
+  allowShape?: LogAllowShape
 }

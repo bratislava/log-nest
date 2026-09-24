@@ -6,21 +6,21 @@ export { LineLoggerSubservice } from './logging/line-logger.subservice'
 export { errorToLogfmt, escapeForLogfmt, toLogfmt } from './logging/logfmt'
 
 // Sanitization
-export { AllowListService } from './sanitization/allow-list.service'
+export { LogAllowListService } from './sanitization/allow-list.service'
 export {
   birthNumberRedactor,
   emailRedactor,
 } from './sanitization/default-redactors'
-export { RedactionService } from './sanitization/redaction.service'
+export { LogRedactionService } from './sanitization/log-redaction.service'
 export {
-  SanitizationModule,
-  type SanitizationOptions,
-} from './sanitization/sanitization.module'
-export { SanitizeMetadataInterceptor } from './sanitization/sanitize-metadata.interceptor'
-export type { AllowShape } from './sanitization/types/allow-list.types'
+  LogSanitizationModule,
+  type LogSanitizationOptions,
+} from './sanitization/logSanitizationModule'
+export { SanitizeLogMetadataInterceptor } from './sanitization/sanitize-log-metadata-interceptor.service'
+export type { LogAllowShape } from './sanitization/types/allow-list.types'
 export type {
-  Redactor,
-  SanitizeMetadata,
+  LogRedactor,
+  SanitizeLogMetadata,
 } from './sanitization/types/redaction.types'
 
 // Errors
@@ -39,10 +39,10 @@ export {
 export { AppLoggerMiddleware } from './middlewares/logger.middleware'
 
 // Decorators
-export { AllowList } from './decorators/allow-list.decorator'
+export { LogAllowList } from './decorators/allow-list.decorator'
 export {
   CatchDatabaseError,
-  type IHasErrorFactoryService,
+  type HasErrorFactoryService,
 } from './decorators/catch-database-error.decorator'
 export { HandleErrors } from './decorators/handle-errors.decorator'
-export { Redact } from './decorators/redact.decorator'
+export { LogRedact } from './decorators/redact.decorator'

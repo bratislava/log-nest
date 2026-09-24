@@ -13,11 +13,11 @@ import {
   ALLOW_LIST_METADATA_KEY,
   REDACT_METADATA_KEY,
 } from './sanitize-metadata.keys'
-import { AllowShape } from './types/allow-list.types'
-import { SanitizeMetadata } from './types/redaction.types'
+import { LogAllowShape } from './types/allow-list.types'
+import { SanitizeLogMetadata } from './types/redaction.types'
 
 /**
- * Resolves this handler's effective `@AllowList`/`@Redact` config (merging
+ * Resolves this handler's effective `@LogAllowList`/`@LogRedact` config (merging
  * controller + endpoint level, same as before) and writes it to
  * `response.locals.sanitizeMetadata` *before* the handler runs.
  *
@@ -27,11 +27,11 @@ import { SanitizeMetadata } from './types/redaction.types'
  * property of the one response object that outlives all of them - there's
  * no return value to lose metadata off in the first place.
  *
- * Registered globally by `SanitizationModule.forRoot()`, so no separate
+ * Registered globally by `LogSanitizationModule.forRoot()`, so no separate
  * `@UseInterceptors()` wiring is needed on top of what's already required.
  */
 @Injectable()
-export class SanitizeMetadataInterceptor implements NestInterceptor {
+export class SanitizeLogMetadataInterceptor implements NestInterceptor {
   constructor(private readonly reflector: Reflector) {}
 
   intercept(
@@ -50,13 +50,13 @@ export class SanitizeMetadataInterceptor implements NestInterceptor {
 
   private resolveMetadata(
     context: ExecutionContext,
-  ): SanitizeMetadata | undefined {
+  ): SanitizeLogMetadata | undefined {
     const targets = [context.getHandler(), context.getClass()]
 
     const allowShape = this.reflector
-      .getAll<(AllowShape | undefined)[]>(ALLOW_LIST_METADATA_KEY, targets)
-      .filter((shape): shape is AllowShape => shape !== undefined)
-      .reduce<AllowShape | undefined>(
+      .getAll<(LogAllowShape | undefined)[]>(ALLOW_LIST_METADATA_KEY, targets)
+      .filter((shape): shape is LogAllowShape => shape !== undefined)
+      .reduce<LogAllowShape | undefined>(
         (merged, shape) =>
           merged === undefined ? shape : mergeAllowShapes(merged, shape),
         undefined,
