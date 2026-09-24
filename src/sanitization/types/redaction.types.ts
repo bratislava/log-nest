@@ -1,6 +1,6 @@
 import { AllowShape } from './allow-list.types'
 
-export interface Redactor {
+export interface LogRedactor {
   /** Unique identifier */
   name: string
 

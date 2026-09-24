@@ -364,9 +364,9 @@ SanitizationModule.forRoot({redactors: [emailRedactor, birthNumberRedactor]}) //
 Writing your own is the same `{name, redact}` shape:
 
 ```ts
-import {Redactor} from '@bratislava/log-nest'
+import {LogRedactor} from '@bratislava/log-nest'
 
-export const ipRedactor: Redactor = {
+export const ipRedactor: LogRedactor = {
   name: 'ip',
   redact: (line) => line.replaceAll(/\b\d{1,3}(\.\d{1,3}){3}\b/g, '<ip>'),
 }
@@ -436,7 +436,7 @@ export class FormRepository implements IHasErrorFactoryService {
 | `ErrorFilter`, `HttpExceptionFilter`, `UnknownExceptionFilter`  | filters           | global exception handling                                                                           |
 | `AppLoggerMiddleware`                                           | middleware        | request/response logging + log/response split                                                       |
 | `SanitizationModule`                                            | module            | `forRoot({ redactors, allowShape, onDisallowed })`; provides + globally exports both services below |
-| `RedactionService`, `Redactor`                                  | class / type      | content-based redaction, by name                                                                    |
+| `RedactionService`, `LogRedactor`                                  | class / type      | content-based redaction, by name                                                                    |
 | `emailRedactor`, `birthNumberRedactor`                          | redactor          | built-in redactors, ready to pass to `SanitizationModule.forRoot({redactors})`                      |
 | `LogAllowListService`, `AllowShape`                                | class / type      | structural key filtering for logged data                                                            |
 | `ErrorEnum`, `ErrorResponseEnum`                                | enums             | shared base error codes + messages                                                                  |

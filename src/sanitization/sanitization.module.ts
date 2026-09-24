@@ -7,7 +7,7 @@ import { FilterByShapeOptions } from './allow-list.util'
 import { RedactionService } from './redaction.service'
 import { SanitizeMetadataInterceptor } from './sanitize-metadata.interceptor'
 import { AllowShape } from './types/allow-list.types'
-import { Redactor } from './types/redaction.types'
+import { LogRedactor } from './types/redaction.types'
 
 export interface SanitizationOptions {
   /**
@@ -15,7 +15,7 @@ export interface SanitizationOptions {
    * every call automatically. Routes only need `@LogRedact(...)` for extra
    * redactors on top of that baseline, not to opt into redaction at all.
    */
-  redactors?: readonly Redactor[]
+  redactors?: readonly LogRedactor[]
   /**
    * App-wide default logAllowList for `request-body`/`response-data`.
    * `@LogAllowList(...)` at the controller/endpoint level only ever widens it
