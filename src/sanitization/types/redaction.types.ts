@@ -14,7 +14,7 @@ export interface LogRedactor {
 /**
  * The effective `@LogRedact`/`@LogAllowList` config for one handler (controller +
  * endpoint level merged), written to `response.locals.sanitizeMetadata` by
- * `SanitizeMetadataInterceptor` before the handler runs, and read back by
+ * `SanitizeLogMetadataInterceptor` before the handler runs, and read back by
  * `AppLoggerMiddleware` regardless of how the handler ends.
  */
 export interface SanitizeMetadata {

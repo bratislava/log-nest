@@ -31,7 +31,7 @@ import { SanitizeMetadata } from './types/redaction.types'
  * `@UseInterceptors()` wiring is needed on top of what's already required.
  */
 @Injectable()
-export class SanitizeMetadataInterceptor implements NestInterceptor {
+export class SanitizeLogMetadataInterceptor implements NestInterceptor {
   constructor(private readonly reflector: Reflector) {}
 
   intercept(

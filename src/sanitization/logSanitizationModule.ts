@@ -5,7 +5,7 @@ import { ErrorFactoryService } from '../errors/error-factory.service'
 import { LogAllowListService } from './allow-list.service'
 import { FilterByShapeOptions } from './allow-list.util'
 import { LogRedactionService } from './log-redaction.service'
-import { SanitizeMetadataInterceptor } from './sanitize-metadata.interceptor'
+import { SanitizeLogMetadataInterceptor } from './sanitize-log-metadata-interceptor.service'
 import { AllowShape } from './types/allow-list.types'
 import { LogRedactor } from './types/redaction.types'
 
@@ -70,7 +70,7 @@ export class LogSanitizationModule {
             return logAllowListService
           },
         },
-        { provide: APP_INTERCEPTOR, useClass: SanitizeMetadataInterceptor },
+        { provide: APP_INTERCEPTOR, useClass: SanitizeLogMetadataInterceptor },
       ],
       exports: [LogRedactionService, LogAllowListService],
     }

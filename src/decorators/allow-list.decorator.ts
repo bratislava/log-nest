@@ -11,7 +11,7 @@ import { AllowShape } from '../sanitization/types/allow-list.types'
  * can never narrow it below the app default.
  *
  * Attaches the shape as reflected metadata (`SetMetadata`); it never touches
- * the method itself. `SanitizeMetadataInterceptor` (registered globally by
+ * the method itself. `SanitizeLogMetadataInterceptor` (registered globally by
  * `LogSanitizationModule.forRoot()`) reads it via `Reflector`, merging
  * controller + endpoint level, and writes the merged result to
  * `response.locals` before the handler runs.
