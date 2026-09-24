@@ -13,7 +13,7 @@ import {
   ALLOW_LIST_METADATA_KEY,
   REDACT_METADATA_KEY,
 } from './sanitize-metadata.keys'
-import { AllowShape } from './types/allow-list.types'
+import { LogAllowShape } from './types/allow-list.types'
 import { SanitizeLogMetadata } from './types/redaction.types'
 
 /**
@@ -54,9 +54,9 @@ export class SanitizeLogMetadataInterceptor implements NestInterceptor {
     const targets = [context.getHandler(), context.getClass()]
 
     const allowShape = this.reflector
-      .getAll<(AllowShape | undefined)[]>(ALLOW_LIST_METADATA_KEY, targets)
-      .filter((shape): shape is AllowShape => shape !== undefined)
-      .reduce<AllowShape | undefined>(
+      .getAll<(LogAllowShape | undefined)[]>(ALLOW_LIST_METADATA_KEY, targets)
+      .filter((shape): shape is LogAllowShape => shape !== undefined)
+      .reduce<LogAllowShape | undefined>(
         (merged, shape) =>
           merged === undefined ? shape : mergeAllowShapes(merged, shape),
         undefined,

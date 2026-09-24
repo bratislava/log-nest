@@ -5,7 +5,7 @@ import {
   FilterByShapeOptions,
   mergeAllowShapes,
 } from './allow-list.util'
-import { AllowShape } from './types/allow-list.types'
+import { LogAllowShape } from './types/allow-list.types'
 
 @Injectable()
 // eslint-disable-next-line @darraghor/nestjs-typed/injectable-should-be-provided
@@ -14,7 +14,7 @@ export class LogAllowListService {
    * App-wide default, set via `LogSanitizationModule.forRoot()`. Defaults to
    * `{}` (deny by default: nothing is logged until something allows it).
    */
-  private globalShape: AllowShape = {}
+  private globalShape: LogAllowShape = {}
 
   /**
    * App-wide default, set via `LogSanitizationModule.forRoot()`. Defaults to
@@ -22,7 +22,7 @@ export class LogAllowListService {
    */
   private onDisallowed: FilterByShapeOptions['onDisallowed'] = 'omit'
 
-  setGlobalShape(shape: AllowShape): void {
+  setGlobalShape(shape: LogAllowShape): void {
     this.globalShape = shape
   }
 
@@ -30,7 +30,7 @@ export class LogAllowListService {
     this.onDisallowed = onDisallowed
   }
 
-  filter(routeShape: AllowShape | undefined, value: unknown): unknown {
+  filter(routeShape: LogAllowShape | undefined, value: unknown): unknown {
     return filterByShape(
       routeShape
         ? mergeAllowShapes(this.globalShape, routeShape)

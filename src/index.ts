@@ -17,7 +17,7 @@ export {
   type LogSanitizationOptions,
 } from './sanitization/logSanitizationModule'
 export { SanitizeLogMetadataInterceptor } from './sanitization/sanitize-log-metadata-interceptor.service'
-export type { AllowShape } from './sanitization/types/allow-list.types'
+export type { LogAllowShape } from './sanitization/types/allow-list.types'
 export type {
   LogRedactor,
   SanitizeLogMetadata,

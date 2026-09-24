@@ -6,7 +6,7 @@ import { LogAllowListService } from './allow-list.service'
 import { FilterByShapeOptions } from './allow-list.util'
 import { LogRedactionService } from './log-redaction.service'
 import { SanitizeLogMetadataInterceptor } from './sanitize-log-metadata-interceptor.service'
-import { AllowShape } from './types/allow-list.types'
+import { LogAllowShape } from './types/allow-list.types'
 import { LogRedactor } from './types/redaction.types'
 
 export interface LogSanitizationOptions {
@@ -23,7 +23,7 @@ export interface LogSanitizationOptions {
    * omitted, so nothing is logged until something (this option or a
    * per-route `@LogAllowList`) explicitly allows it.
    */
-  allowShape?: AllowShape
+  allowShape?: LogAllowShape
   /**
    * What a disallowed key/value becomes in the log: `'omit'` (default) drops
    * it entirely, `'redact'` keeps its position but replaces it with a fixed

@@ -1,4 +1,4 @@
-import { AllowShape } from './allow-list.types'
+import { LogAllowShape } from './allow-list.types'
 
 export interface LogRedactor {
   /** Unique identifier */
@@ -21,5 +21,5 @@ export interface SanitizeLogMetadata {
   /** Names of the redactors `@LogRedact(...)` was called with for this method. */
   redactorNames?: readonly string[]
   /** Shape `@LogAllowList(...)` was called with for this method/controller. */
-  allowShape?: AllowShape
+  allowShape?: LogAllowShape
 }

@@ -1,13 +1,13 @@
-import { AllowShape } from './types/allow-list.types'
+import { LogAllowShape } from './types/allow-list.types'
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
 function childShape(
-  shape: Record<string, AllowShape>,
+  shape: Record<string, LogAllowShape>,
   key: string,
-): AllowShape | undefined {
+): LogAllowShape | undefined {
   // eslint-disable-next-line security/detect-object-injection
   return Object.hasOwn(shape, key) ? shape[key] : undefined
 }
@@ -19,19 +19,19 @@ function childShape(
  * `undefined` on one side means "no opinion" and the other side's shape is
  * used as-is, recursively.
  */
-export function mergeAllowShapes(a: AllowShape, b: AllowShape): AllowShape {
-  return mergeAllowShapesInternal(a, b) as AllowShape
+export function mergeAllowShapes(a: LogAllowShape, b: LogAllowShape): LogAllowShape {
+  return mergeAllowShapesInternal(a, b) as LogAllowShape
 }
 
 /**
- * @returns the merged `AllowShape`, or `undefined` if both `a` and `b` are
+ * @returns the merged `LogAllowShape`, or `undefined` if both `a` and `b` are
  * `undefined`. (The `@returns` tag is required here as without it, sonarjs
  * flags the mixed `true`/object/`undefined` return as inconsistent.)
  */
 function mergeAllowShapesInternal(
-  a: AllowShape | undefined,
-  b: AllowShape | undefined,
-): AllowShape | undefined {
+  a: LogAllowShape | undefined,
+  b: LogAllowShape | undefined,
+): LogAllowShape | undefined {
   if (a === undefined) {
     return b
   }
@@ -42,7 +42,7 @@ function mergeAllowShapesInternal(
     return true
   }
 
-  const merged: Record<string, AllowShape> = {}
+  const merged: Record<string, LogAllowShape> = {}
   for (const key of new Set([...Object.keys(a), ...Object.keys(b)])) {
     const mergedChild = mergeAllowShapesInternal(
       childShape(a, key),
@@ -75,7 +75,7 @@ export interface FilterByShapeOptions {
  * in the logging hot path (every request), so it must never throw.
  */
 export function filterByShape(
-  shape: AllowShape | undefined,
+  shape: LogAllowShape | undefined,
   value: unknown,
   options: FilterByShapeOptions = {},
 ): unknown {

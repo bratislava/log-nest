@@ -1,7 +1,7 @@
 import { SetMetadata } from '@nestjs/common'
 
 import { ALLOW_LIST_METADATA_KEY } from '../sanitization/sanitize-metadata.keys'
-import { AllowShape } from '../sanitization/types/allow-list.types'
+import { LogAllowShape } from '../sanitization/types/allow-list.types'
 
 /**
  * Restricts which keys of a method's result/error may end up in
@@ -28,6 +28,6 @@ import { AllowShape } from '../sanitization/types/allow-list.types'
  * }
  * ```
  */
-export function LogAllowList(shape: AllowShape): MethodDecorator & ClassDecorator {
+export function LogAllowList(shape: LogAllowShape): MethodDecorator & ClassDecorator {
   return SetMetadata(ALLOW_LIST_METADATA_KEY, shape)
 }

@@ -4,7 +4,7 @@ import { NextFunction, Request, Response } from 'express'
 import { LineLoggerSubservice } from '../logging/line-logger.subservice'
 import { LogAllowListService } from '../sanitization/allow-list.service'
 import { LogRedactionService } from '../sanitization/log-redaction.service'
-import { AllowShape } from '../sanitization/types/allow-list.types'
+import { LogAllowShape } from '../sanitization/types/allow-list.types'
 import { SanitizeLogMetadata } from '../sanitization/types/redaction.types'
 
 const SERVER_ERROR_FROM = 500
@@ -177,7 +177,7 @@ export class AppLoggerMiddleware implements NestMiddleware {
 
   private sanitize(
     redactorNames: readonly string[],
-    allowShape: AllowShape | undefined,
+    allowShape: LogAllowShape | undefined,
     value: unknown,
   ): unknown {
     const filtered = this.logAllowListService.filter(allowShape, value)
@@ -186,7 +186,7 @@ export class AppLoggerMiddleware implements NestMiddleware {
 
   private sanitizeToJson(
     redactorNames: readonly string[],
-    allowShape: AllowShape | undefined,
+    allowShape: LogAllowShape | undefined,
     value: unknown,
   ): string {
     return JSON.stringify(this.sanitize(redactorNames, allowShape, value))
