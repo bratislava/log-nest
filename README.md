@@ -410,12 +410,12 @@ export class PaymentCronService {
 `@CatchDatabaseError()` remaps anything thrown by the method into an `UnprocessableEntityException` with
 `ErrorEnum.DATABASE_ERROR`, keeping the original error as the logged cause. The class must expose the error factory
 service as
-`errorFactoryService` (enforced by the `IHasErrorFactoryService` interface):
+`errorFactoryService` (enforced by the `HasErrorFactoryService` interface):
 
 ```ts
 
 @Injectable()
-export class FormRepository implements IHasErrorFactoryService {
+export class FormRepository implements HasErrorFactoryService {
   constructor(public readonly errorFactoryService: ErrorFactoryService) {
   }
 
@@ -441,7 +441,7 @@ export class FormRepository implements IHasErrorFactoryService {
 | `LogAllowListService`, `LogAllowShape`                                | class / type      | structural key filtering for logged data                                                            |
 | `ErrorEnum`, `ErrorResponseEnum`                                | enums             | shared base error codes + messages                                                                  |
 | `toLogfmt`, `errorToLogfmt`, `escapeForLogfmt`                  | functions         | logfmt helpers                                                                                      |
-| `HandleErrors`, `CatchDatabaseError`, `IHasErrorFactoryService` | decorators / type | error-handling decorators                                                                           |
+| `HandleErrors`, `CatchDatabaseError`, `HasErrorFactoryService` | decorators / type | error-handling decorators                                                                           |
 | `LogRedact`, `LogAllowList`                                           | decorators        | per-route redaction / allowlist filtering, additive over the global config                          |
 
 ## Developing and running tests

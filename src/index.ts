@@ -42,7 +42,7 @@ export { AppLoggerMiddleware } from './middlewares/logger.middleware'
 export { LogAllowList } from './decorators/allow-list.decorator'
 export {
   CatchDatabaseError,
-  type IHasErrorFactoryService,
+  type HasErrorFactoryService,
 } from './decorators/catch-database-error.decorator'
 export { HandleErrors } from './decorators/handle-errors.decorator'
 export { LogRedact } from './decorators/redact.decorator'

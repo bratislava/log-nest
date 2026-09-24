@@ -10,7 +10,7 @@ function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
 }
 
 /** Classes using {@link CatchDatabaseError} must expose the error factory service under this name. */
-export interface IHasErrorFactoryService {
+export interface HasErrorFactoryService {
   errorFactoryService: ErrorFactoryService
 }
 
@@ -19,12 +19,12 @@ export interface IHasErrorFactoryService {
  * `UnprocessableEntityException` with {@link ErrorEnum.DATABASE_ERROR}, passing
  * the original error as the cause. Preserves the method's sync/async nature.
  *
- * The host class must implement {@link IHasErrorFactoryService}.
+ * The host class must implement {@link HasErrorFactoryService}.
  *
  * @example
  * ```ts
  * @Injectable()
- * class FormRepository implements IHasErrorFactoryService {
+ * class FormRepository implements HasErrorFactoryService {
  *   constructor(public readonly errorFactoryService: ErrorFactoryService) {}
  *
  *   @CatchDatabaseError()
@@ -36,17 +36,17 @@ export interface IHasErrorFactoryService {
  */
 export function CatchDatabaseError() {
   return function (
-    target: IHasErrorFactoryService,
+    target: HasErrorFactoryService,
     _propertyKey: string,
     descriptor: PropertyDescriptor,
   ): PropertyDescriptor {
     const originalMethod = descriptor.value as (
-      this: IHasErrorFactoryService,
+      this: HasErrorFactoryService,
       ...args: unknown[]
     ) => unknown
 
     descriptor.value = function (
-      this: IHasErrorFactoryService,
+      this: HasErrorFactoryService,
       ...args: unknown[]
     ): unknown {
       const mapError = (error: unknown): never => {
@@ -55,7 +55,7 @@ export function CatchDatabaseError() {
         if (!this.errorFactoryService) {
           throw new Error(
             `CatchDatabaseError decorator requires the class to have a 'errorFactoryService' property. ` +
-              `Please ensure ${target.constructor.name} implements IHasErrorFactoryService.`,
+              `Please ensure ${target.constructor.name} implements HasErrorFactoryService.`,
           )
         }
         throw this.errorFactoryService.UnprocessableEntityException({
