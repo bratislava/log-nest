@@ -4,7 +4,7 @@ import { Get } from '@nestjs/common'
 import { PATH_METADATA } from '@nestjs/common/constants'
 
 import { LogAllowList } from '../allow-list.decorator'
-import { Redact } from '../redact.decorator'
+import { LogRedact } from '../redact.decorator'
 
 const routeOf = (ctor: new () => unknown, key: string): unknown => {
   const proto = ctor.prototype as Record<string, object>
@@ -12,7 +12,7 @@ const routeOf = (ctor: new () => unknown, key: string): unknown => {
   return Reflect.getMetadata(PATH_METADATA, proto[key])
 }
 
-// @LogAllowList/@Redact now attach via SetMetadata, which never touches
+// @LogAllowList/@LogRedact now attach via SetMetadata, which never touches
 // descriptor.value, so there's no method reference to lose route metadata
 // off in the first place - but this regression is cheap enough to keep an
 // explicit guard for.
@@ -47,9 +47,9 @@ describe('route metadata survives the sanitize decorators', () => {
     expect(routeOf(Ctrl, 'ping')).toBe('ping')
   })
 
-  it('method-level @Redact above the route decorator keeps its metadata', () => {
+  it('method-level @LogRedact above the route decorator keeps its metadata', () => {
     class Ctrl {
-      @Redact('email')
+      @LogRedact('email')
       @Get('ping')
       ping(): string {
         return 'pong'
@@ -59,10 +59,10 @@ describe('route metadata survives the sanitize decorators', () => {
     expect(routeOf(Ctrl, 'ping')).toBe('ping')
   })
 
-  it('@Redact below the route decorator also keeps its metadata', () => {
+  it('@LogRedact below the route decorator also keeps its metadata', () => {
     class Ctrl {
       @Get('ping')
-      @Redact('email')
+      @LogRedact('email')
       ping(): string {
         return 'pong'
       }

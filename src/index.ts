@@ -45,4 +45,4 @@ export {
   type IHasErrorFactoryService,
 } from './decorators/catch-database-error.decorator'
 export { HandleErrors } from './decorators/handle-errors.decorator'
-export { Redact } from './decorators/redact.decorator'
+export { LogRedact } from './decorators/redact.decorator'

@@ -58,7 +58,7 @@ export class AppLoggerMiddleware implements NestMiddleware {
       response.locals.middlewareUsed = undefined
 
       // `SanitizeMetadataInterceptor` wrote this before the handler ran, if
-      // `@LogAllowList`/`@Redact` applied to it - independent of `exitData`,
+      // `@LogAllowList`/`@LogRedact` applied to it - independent of `exitData`,
       // which by now might be the stringified body, not the original value.
       const loggingOptions = response.locals.sanitizeMetadata as
         SanitizeMetadata | undefined
@@ -131,7 +131,7 @@ export class AppLoggerMiddleware implements NestMiddleware {
         this.sanitizeToJson(redactorNames, allowShape, body),
         // `url` is a bare string, not a keyed object - `allowShape` only
         // ever describes structure to recurse into, so it can't sensibly
-        // apply here; only content-based `@Redact` can act on it.
+        // apply here; only content-based `@LogRedact` can act on it.
         this.sanitize(redactorNames, true, url) as string,
       )
 

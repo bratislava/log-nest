@@ -17,7 +17,7 @@ import { AllowShape } from './types/allow-list.types'
 import { SanitizeMetadata } from './types/redaction.types'
 
 /**
- * Resolves this handler's effective `@LogAllowList`/`@Redact` config (merging
+ * Resolves this handler's effective `@LogAllowList`/`@LogRedact` config (merging
  * controller + endpoint level, same as before) and writes it to
  * `response.locals.sanitizeMetadata` *before* the handler runs.
  *

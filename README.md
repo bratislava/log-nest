@@ -66,7 +66,7 @@ import {alertReporting} from './alert-reporting'
 @Module({
   imports: [
     NestLoggingModule.forRoot({alertReporting}),
-    SanitizationModule.forRoot(), // registers redactors + the AllowList for @Redact/@LogAllowList
+    SanitizationModule.forRoot(), // registers redactors + the AllowList for @LogRedact/@LogAllowList
   ],
 })
 export class AppModule implements NestModule {
@@ -295,7 +295,7 @@ verification**, purely for log correlation. Never treat it as authenticated.
 ### Filtering logged data: `@LogAllowList`
 
 > [!WARNING]
-> `@LogAllowList`/`@Redact` are not a silver bullet - they only ever filter `request-body`/`response-data`. Every other
+> `@LogAllowList`/`@LogRedact` are not a silver bullet - they only ever filter `request-body`/`response-data`. Every other
 > field on the line (`method`, `originalUrl`, `userAgent`, `ip`, `userId`, `statusCode`, `responseTime`) is logged
 > verbatim, always, with no filtering or redaction applied. In particular:
 >
@@ -347,9 +347,9 @@ SanitizationModule.forRoot({allowShape: {id: true}, onDisallowed: 'redact'})
 response-data="{\"id\":\"1\",\"secret\":\"[REDACTED]\"}"
 ```
 
-### Redacting logged data: `@Redact`
+### Redacting logged data: `@LogRedact`
 
-Where `@LogAllowList` is *structural* (which keys survive at all), `@Redact` is *content-based*: it masks matching patterns
+Where `@LogAllowList` is *structural* (which keys survive at all), `@LogRedact` is *content-based*: it masks matching patterns
 (emails, IDs, ...) inside whatever `@LogAllowList` leaves behind, on the resulting value's string leaves. Register named
 redactors once via `SanitizationModule.forRoot({redactors})`, then reference them by name. `emailRedactor` and
 `birthNumberRedactor` (Slovak "rodné číslo") ship built in:
@@ -377,7 +377,7 @@ export const ipRedactor: Redactor = {
 @Controller('users')
 export class UserController {
   @Get(':id')
-  @Redact('email') // extra, endpoint-specific redactor on top of the global set, by name
+  @LogRedact('email') // extra, endpoint-specific redactor on top of the global set, by name
   async getUser(@Param('id') id: string): Promise<User> {
     return this.userService.findById(id)
   }
@@ -442,7 +442,7 @@ export class FormRepository implements IHasErrorFactoryService {
 | `ErrorEnum`, `ErrorResponseEnum`                                | enums             | shared base error codes + messages                                                                  |
 | `toLogfmt`, `errorToLogfmt`, `escapeForLogfmt`                  | functions         | logfmt helpers                                                                                      |
 | `HandleErrors`, `CatchDatabaseError`, `IHasErrorFactoryService` | decorators / type | error-handling decorators                                                                           |
-| `Redact`, `LogAllowList`                                           | decorators        | per-route redaction / allowlist filtering, additive over the global config                          |
+| `LogRedact`, `LogAllowList`                                           | decorators        | per-route redaction / allowlist filtering, additive over the global config                          |
 
 ## Developing and running tests
 

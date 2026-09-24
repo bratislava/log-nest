@@ -15,6 +15,6 @@ import { REDACT_METADATA_KEY } from '../sanitization/sanitize-metadata.keys'
  * controller + endpoint level, and writes the combined result to
  * `response.locals` before the handler runs.
  */
-export function Redact(...redactorNames: string[]): MethodDecorator & ClassDecorator {
+export function LogRedact(...redactorNames: string[]): MethodDecorator & ClassDecorator {
   return SetMetadata(REDACT_METADATA_KEY, redactorNames)
 }

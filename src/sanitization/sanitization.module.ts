@@ -12,7 +12,7 @@ import { Redactor } from './types/redaction.types'
 export interface SanitizationOptions {
   /**
    * Redactors applied globally: `RedactionService.redact()` applies them to
-   * every call automatically. Routes only need `@Redact(...)` for extra
+   * every call automatically. Routes only need `@LogRedact(...)` for extra
    * redactors on top of that baseline, not to opt into redaction at all.
    */
   redactors?: readonly Redactor[]

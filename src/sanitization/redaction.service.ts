@@ -41,11 +41,11 @@ export class RedactionService {
    * Registers `redactors` (like {@link register}) and marks their names as
    * always-applied: every `redact()` call runs them automatically, on top of
    * whatever names it's explicitly given, so a route doesn't need
-   * `@Redact(...)` just to get the process-wide baseline. Configured via
+   * `@LogRedact(...)` just to get the process-wide baseline. Configured via
    * `SanitizationModule.forRoot(redactors)`.
    *
    * Use `register()` alone for redactors that should only run when a route
-   * opts in by name via `@Redact('name')`.
+   * opts in by name via `@LogRedact('name')`.
    */
   registerGlobal(...redactors: Redactor[]) {
     this.register(...redactors)
