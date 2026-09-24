@@ -66,7 +66,7 @@ import {alertReporting} from './alert-reporting'
 @Module({
   imports: [
     NestLoggingModule.forRoot({alertReporting}),
-    LogSanitizationModule.forRoot(), // registers redactors + the AllowList for @LogRedact/@LogAllowList
+    LogSanitizationModule.forRoot(), // registers redactors + the allowlist for @LogRedact/@LogAllowList
   ],
 })
 export class AppModule implements NestModule {
@@ -76,9 +76,10 @@ export class AppModule implements NestModule {
 }
 ```
 
-`AppLoggerMiddleware` depends on both `LogRedactionService` and `LogAllowListService`, so `LogSanitizationModule.forRoot()` must
-be imported even if you don't configure any redactors or allowlist yet. Omitting `allowShape` denies by default: nothing
-is logged until an `allowShape` here or a per-route `@LogAllowList` explicitly allows it.
+`AppLoggerMiddleware` depends on both `LogRedactionService` and `LogAllowListService`, so
+`LogSanitizationModule.forRoot()` must be imported even if you don't configure any redactors or allowlist yet. Omitting
+`allowShape` denies by default: nothing is logged until an `allowShape` here or a per-route `@LogAllowList` explicitly
+allows it.
 
 Then wire the logger and the global exception filters in `main.ts`:
 
@@ -295,8 +296,8 @@ verification**, purely for log correlation. Never treat it as authenticated.
 ### Filtering logged data: `@LogAllowList`
 
 > [!WARNING]
-> `@LogAllowList`/`@LogRedact` are not a silver bullet - they only ever filter `request-body`/`response-data`. Every other
-> field on the line (`method`, `originalUrl`, `userAgent`, `ip`, `userId`, `statusCode`, `responseTime`) is logged
+> `@LogAllowList`/`@LogRedact` are not a silver bullet - they only ever filter `request-body`/`response-data`. Every 
+> other field on the line (`method`, `originalUrl`, `userAgent`, `ip`, `userId`, `statusCode`, `responseTime`) is logged
 > verbatim, always, with no filtering or redaction applied. In particular:
 >
 > - **`originalUrl` includes the full path and query string, unfiltered.** Don't put anything sensitive there (a
@@ -312,9 +313,9 @@ verification**, purely for log correlation. Never treat it as authenticated.
 > This package gives you a deliberate, targeted way to log more of `request-body`/`response-data` while staying
 > safe - not a blanket PII scrubber for everything your app logs.
 
-`@LogAllowList(shape)` restricts which keys of `request-body`/`response-data` `AppLoggerMiddleware` is allowed to log, on
-top of the app-wide default from `LogSanitizationModule.forRoot({allowShape})`. A shape is a tree: `true` keeps a whole
-subtree as-is, and a nested object recurses key-by-key. Anything not mentioned is dropped. Each level only ever
+`@LogAllowList(shape)` restricts which keys of `request-body`/`response-data` `AppLoggerMiddleware` is allowed to log,
+on top of the app-wide default from `LogSanitizationModule.forRoot({allowShape})`. A shape is a tree: `true` keeps a
+whole subtree as-is, and a nested object recurses key-by-key. Anything not mentioned is dropped. Each level only ever
 **widens** what's allowed; an endpoint or controller can't narrow the app-wide default below what it already allows.
 
 ```ts
@@ -349,10 +350,10 @@ response-data="{\"id\":\"1\",\"secret\":\"[REDACTED]\"}"
 
 ### Redacting logged data: `@LogRedact`
 
-Where `@LogAllowList` is *structural* (which keys survive at all), `@LogRedact` is *content-based*: it masks matching patterns
-(emails, IDs, ...) inside whatever `@LogAllowList` leaves behind, on the resulting value's string leaves. Register named
-redactors once via `LogSanitizationModule.forRoot({redactors})`, then reference them by name. `emailRedactor` and
-`birthNumberRedactor` (Slovak "rodné číslo") ship built in:
+Where `@LogAllowList` is *structural* (which keys survive at all), `@LogRedact` is *content-based*: it masks matching
+patterns (emails, IDs, ...) inside whatever `@LogAllowList` leaves behind, on the resulting value's string leaves.
+Register named redactors once via `LogSanitizationModule.forRoot({redactors})`, then reference them by name.
+`emailRedactor` and `birthNumberRedactor` (Slovak "rodné číslo") ship built in:
 
 ```ts
 // app.module.ts
@@ -428,21 +429,21 @@ export class FormRepository implements HasErrorFactoryService {
 
 ## Exports
 
-| Export                                                          | Kind              | Purpose                                                                                             |
-|-----------------------------------------------------------------|-------------------|-----------------------------------------------------------------------------------------------------|
-| `NestLoggingModule`                                             | module            | `forRoot({ alertReporting })`; provides + globally exports the error factory service                |
-| `ErrorFactoryService<T>`, `LogNestErrorEnumRegistry`            | injectable / type | exception factory, generic over the enum union; registry for the no-generic default                 |
-| `LineLoggerSubservice`                                          | class             | logfmt `LoggerService`                                                                              |
-| `ErrorFilter`, `HttpExceptionFilter`, `UnknownExceptionFilter`  | filters           | global exception handling                                                                           |
-| `AppLoggerMiddleware`                                           | middleware        | request/response logging + log/response split                                                       |
-| `LogSanitizationModule`                                            | module            | `forRoot({ redactors, allowShape, onDisallowed })`; provides + globally exports both services below |
-| `LogRedactionService`, `LogRedactor`                                  | class / type      | content-based redaction, by name                                                                    |
-| `emailRedactor`, `birthNumberRedactor`                          | redactor          | built-in redactors, ready to pass to `LogSanitizationModule.forRoot({redactors})`                      |
-| `LogAllowListService`, `LogAllowShape`                                | class / type      | structural key filtering for logged data                                                            |
-| `ErrorEnum`, `ErrorResponseEnum`                                | enums             | shared base error codes + messages                                                                  |
-| `toLogfmt`, `errorToLogfmt`, `escapeForLogfmt`                  | functions         | logfmt helpers                                                                                      |
+| Export                                                         | Kind              | Purpose                                                                                             |
+|----------------------------------------------------------------|-------------------|-----------------------------------------------------------------------------------------------------|
+| `NestLoggingModule`                                            | module            | `forRoot({ alertReporting })`; provides + globally exports the error factory service                |
+| `ErrorFactoryService<T>`, `LogNestErrorEnumRegistry`           | injectable / type | exception factory, generic over the enum union; registry for the no-generic default                 |
+| `LineLoggerSubservice`                                         | class             | logfmt `LoggerService`                                                                              |
+| `ErrorFilter`, `HttpExceptionFilter`, `UnknownExceptionFilter` | filters           | global exception handling                                                                           |
+| `AppLoggerMiddleware`                                          | middleware        | request/response logging + log/response split                                                       |
+| `LogSanitizationModule`                                        | module            | `forRoot({ redactors, allowShape, onDisallowed })`; provides + globally exports both services below |
+| `LogRedactionService`, `LogRedactor`                           | class / type      | content-based redaction, by name                                                                    |
+| `emailRedactor`, `birthNumberRedactor`                         | redactor          | built-in redactors, ready to pass to `LogSanitizationModule.forRoot({redactors})`                   |
+| `LogAllowListService`, `LogAllowShape`                         | class / type      | structural key filtering for logged data                                                            |
+| `ErrorEnum`, `ErrorResponseEnum`                               | enums             | shared base error codes + messages                                                                  |
+| `toLogfmt`, `errorToLogfmt`, `escapeForLogfmt`                 | functions         | logfmt helpers                                                                                      |
 | `HandleErrors`, `CatchDatabaseError`, `HasErrorFactoryService` | decorators / type | error-handling decorators                                                                           |
-| `LogRedact`, `LogAllowList`                                           | decorators        | per-route redaction / allowlist filtering, additive over the global config                          |
+| `LogRedact`, `LogAllowList`                                    | decorators        | per-route redaction / allowlist filtering, additive over the global config                          |
 
 ## Developing and running tests
 
