@@ -5,7 +5,7 @@ import { LineLoggerSubservice } from '../logging/line-logger.subservice'
 import { LogAllowListService } from '../sanitization/allow-list.service'
 import { LogRedactionService } from '../sanitization/log-redaction.service'
 import { AllowShape } from '../sanitization/types/allow-list.types'
-import { SanitizeMetadata } from '../sanitization/types/redaction.types'
+import { SanitizeLogMetadata } from '../sanitization/types/redaction.types'
 
 const SERVER_ERROR_FROM = 500
 const CLIENT_ERROR_FROM = 400
@@ -61,7 +61,7 @@ export class AppLoggerMiddleware implements NestMiddleware {
       // `@LogAllowList`/`@LogRedact` applied to it - independent of `exitData`,
       // which by now might be the stringified body, not the original value.
       const loggingOptions = response.locals.sanitizeMetadata as
-        SanitizeMetadata | undefined
+        SanitizeLogMetadata | undefined
       response.locals.sanitizeMetadata = undefined
       const redactorNames = loggingOptions?.redactorNames ?? []
       const allowShape = loggingOptions?.allowShape
@@ -118,7 +118,7 @@ export class AppLoggerMiddleware implements NestMiddleware {
       response.locals.middlewareUsed = undefined
 
       const loggingOptions = response.locals.sanitizeMetadata as
-        SanitizeMetadata | undefined
+        SanitizeLogMetadata | undefined
       response.locals.sanitizeMetadata = undefined
       const redactorNames = loggingOptions?.redactorNames ?? []
       const allowShape = loggingOptions?.allowShape

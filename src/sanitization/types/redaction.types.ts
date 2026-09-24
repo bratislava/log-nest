@@ -17,7 +17,7 @@ export interface LogRedactor {
  * `SanitizeLogMetadataInterceptor` before the handler runs, and read back by
  * `AppLoggerMiddleware` regardless of how the handler ends.
  */
-export interface SanitizeMetadata {
+export interface SanitizeLogMetadata {
   /** Names of the redactors `@LogRedact(...)` was called with for this method. */
   redactorNames?: readonly string[]
   /** Shape `@LogAllowList(...)` was called with for this method/controller. */

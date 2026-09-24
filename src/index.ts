@@ -20,7 +20,7 @@ export { SanitizeLogMetadataInterceptor } from './sanitization/sanitize-log-meta
 export type { AllowShape } from './sanitization/types/allow-list.types'
 export type {
   LogRedactor,
-  SanitizeMetadata,
+  SanitizeLogMetadata,
 } from './sanitization/types/redaction.types'
 
 // Errors

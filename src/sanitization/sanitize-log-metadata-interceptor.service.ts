@@ -14,7 +14,7 @@ import {
   REDACT_METADATA_KEY,
 } from './sanitize-metadata.keys'
 import { AllowShape } from './types/allow-list.types'
-import { SanitizeMetadata } from './types/redaction.types'
+import { SanitizeLogMetadata } from './types/redaction.types'
 
 /**
  * Resolves this handler's effective `@LogAllowList`/`@LogRedact` config (merging
@@ -50,7 +50,7 @@ export class SanitizeLogMetadataInterceptor implements NestInterceptor {
 
   private resolveMetadata(
     context: ExecutionContext,
-  ): SanitizeMetadata | undefined {
+  ): SanitizeLogMetadata | undefined {
     const targets = [context.getHandler(), context.getClass()]
 
     const allowShape = this.reflector
