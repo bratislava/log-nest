@@ -2,7 +2,7 @@ import { DynamicModule, Global, Module } from '@nestjs/common'
 import { APP_INTERCEPTOR } from '@nestjs/core'
 
 import { ErrorFactoryService } from '../errors/error-factory.service'
-import { AllowListService } from './allow-list.service'
+import { LogAllowListService } from './allow-list.service'
 import { FilterByShapeOptions } from './allow-list.util'
 import { RedactionService } from './redaction.service'
 import { SanitizeMetadataInterceptor } from './sanitize-metadata.interceptor'
@@ -17,11 +17,11 @@ export interface SanitizationOptions {
    */
   redactors?: readonly Redactor[]
   /**
-   * App-wide default allowlist for `request-body`/`response-data`.
-   * `@AllowList(...)` at the controller/endpoint level only ever widens it
+   * App-wide default logAllowList for `request-body`/`response-data`.
+   * `@LogAllowList(...)` at the controller/endpoint level only ever widens it
    * further for that route, it can't narrow it. Deny by default (`{}`) when
    * omitted, so nothing is logged until something (this option or a
-   * per-route `@AllowList`) explicitly allows it.
+   * per-route `@LogAllowList`) explicitly allows it.
    */
   allowShape?: AllowShape
   /**
@@ -34,7 +34,7 @@ export interface SanitizationOptions {
 }
 
 /**
- * Provides {@link RedactionService} and {@link AllowListService}
+ * Provides {@link RedactionService} and {@link LogAllowListService}
  * process-wide, so any module (including one that wires up
  * `AppLoggerMiddleware`) can inject them without explicitly importing this
  * module.
@@ -62,17 +62,17 @@ export class SanitizationModule {
           inject: [ErrorFactoryService],
         },
         {
-          provide: AllowListService,
+          provide: LogAllowListService,
           useFactory: () => {
-            const allowListService = new AllowListService()
-            allowListService.setGlobalShape(options.allowShape ?? {})
-            allowListService.setOnDisallowed(options.onDisallowed ?? 'omit')
-            return allowListService
+            const logAllowListService = new LogAllowListService()
+            logAllowListService.setGlobalShape(options.allowShape ?? {})
+            logAllowListService.setOnDisallowed(options.onDisallowed ?? 'omit')
+            return logAllowListService
           },
         },
         { provide: APP_INTERCEPTOR, useClass: SanitizeMetadataInterceptor },
       ],
-      exports: [RedactionService, AllowListService],
+      exports: [RedactionService, LogAllowListService],
     }
   }
 }

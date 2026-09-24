@@ -13,7 +13,7 @@ function childShape(
 }
 
 /**
- * Unions two shapes: since more `@AllowList` levels (app, controller,
+ * Unions two shapes: since more `@LogAllowList` levels (app, controller,
  * endpoint) only ever widen what's logged, a key allowed by either side ends
  * up allowed in the result. `true` on either side wins for that key.
  * `undefined` on one side means "no opinion" and the other side's shape is

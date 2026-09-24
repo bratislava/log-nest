@@ -3,7 +3,7 @@ import 'reflect-metadata'
 import { Get } from '@nestjs/common'
 import { PATH_METADATA } from '@nestjs/common/constants'
 
-import { AllowList } from '../allow-list.decorator'
+import { LogAllowList } from '../allow-list.decorator'
 import { Redact } from '../redact.decorator'
 
 const routeOf = (ctor: new () => unknown, key: string): unknown => {
@@ -12,13 +12,13 @@ const routeOf = (ctor: new () => unknown, key: string): unknown => {
   return Reflect.getMetadata(PATH_METADATA, proto[key])
 }
 
-// @AllowList/@Redact now attach via SetMetadata, which never touches
+// @LogAllowList/@Redact now attach via SetMetadata, which never touches
 // descriptor.value, so there's no method reference to lose route metadata
 // off in the first place - but this regression is cheap enough to keep an
 // explicit guard for.
 describe('route metadata survives the sanitize decorators', () => {
-  it('class-level @AllowList keeps every method’s route metadata reachable', () => {
-    @AllowList({ id: true })
+  it('class-level @LogAllowList keeps every method’s route metadata reachable', () => {
+    @LogAllowList({ id: true })
     class Ctrl {
       @Get('ping')
       ping(): string {
@@ -35,9 +35,9 @@ describe('route metadata survives the sanitize decorators', () => {
     expect(routeOf(Ctrl, 'pong')).toBe('pong')
   })
 
-  it('method-level @AllowList above the route decorator keeps its metadata', () => {
+  it('method-level @LogAllowList above the route decorator keeps its metadata', () => {
     class Ctrl {
-      @AllowList({ id: true })
+      @LogAllowList({ id: true })
       @Get('ping')
       ping(): string {
         return 'pong'

@@ -2,7 +2,7 @@ import { Injectable, NestMiddleware } from '@nestjs/common'
 import { NextFunction, Request, Response } from 'express'
 
 import { LineLoggerSubservice } from '../logging/line-logger.subservice'
-import { AllowListService } from '../sanitization/allow-list.service'
+import { LogAllowListService } from '../sanitization/allow-list.service'
 import { RedactionService } from '../sanitization/redaction.service'
 import { AllowShape } from '../sanitization/types/allow-list.types'
 import { SanitizeMetadata } from '../sanitization/types/redaction.types'
@@ -26,7 +26,7 @@ interface RequestLogContext {
 export class AppLoggerMiddleware implements NestMiddleware {
   constructor(
     private readonly redactionService: RedactionService,
-    private readonly allowListService: AllowListService,
+    private readonly logAllowListService: LogAllowListService,
   ) {}
 
   use(request: Request, response: Response, next: NextFunction): void {
@@ -58,7 +58,7 @@ export class AppLoggerMiddleware implements NestMiddleware {
       response.locals.middlewareUsed = undefined
 
       // `SanitizeMetadataInterceptor` wrote this before the handler ran, if
-      // `@AllowList`/`@Redact` applied to it - independent of `exitData`,
+      // `@LogAllowList`/`@Redact` applied to it - independent of `exitData`,
       // which by now might be the stringified body, not the original value.
       const loggingOptions = response.locals.sanitizeMetadata as
         SanitizeMetadata | undefined
@@ -180,7 +180,7 @@ export class AppLoggerMiddleware implements NestMiddleware {
     allowShape: AllowShape | undefined,
     value: unknown,
   ): unknown {
-    const filtered = this.allowListService.filter(allowShape, value)
+    const filtered = this.logAllowListService.filter(allowShape, value)
     return this.redactionService.redact(redactorNames, filtered)
   }
 

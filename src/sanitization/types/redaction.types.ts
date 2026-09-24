@@ -12,7 +12,7 @@ export interface Redactor {
 }
 
 /**
- * The effective `@Redact`/`@AllowList` config for one handler (controller +
+ * The effective `@Redact`/`@LogAllowList` config for one handler (controller +
  * endpoint level merged), written to `response.locals.sanitizeMetadata` by
  * `SanitizeMetadataInterceptor` before the handler runs, and read back by
  * `AppLoggerMiddleware` regardless of how the handler ends.
@@ -20,6 +20,6 @@ export interface Redactor {
 export interface SanitizeMetadata {
   /** Names of the redactors `@Redact(...)` was called with for this method. */
   redactorNames?: readonly string[]
-  /** Shape `@AllowList(...)` was called with for this method/controller. */
+  /** Shape `@LogAllowList(...)` was called with for this method/controller. */
   allowShape?: AllowShape
 }

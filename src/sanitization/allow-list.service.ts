@@ -9,7 +9,7 @@ import { AllowShape } from './types/allow-list.types'
 
 @Injectable()
 // eslint-disable-next-line @darraghor/nestjs-typed/injectable-should-be-provided
-export class AllowListService {
+export class LogAllowListService {
   /**
    * App-wide default, set via `SanitizationModule.forRoot()`. Defaults to
    * `{}` (deny by default: nothing is logged until something allows it).

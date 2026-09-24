@@ -23,11 +23,11 @@ import { AllowShape } from '../sanitization/types/allow-list.types'
  * @example
  * ```ts
  * class UserController {
- *   @AllowList({ id: true, email: true })
+ *   @LogAllowList({ id: true, email: true })
  *   async getUser(id: string) { ... }
  * }
  * ```
  */
-export function AllowList(shape: AllowShape): MethodDecorator & ClassDecorator {
+export function LogAllowList(shape: AllowShape): MethodDecorator & ClassDecorator {
   return SetMetadata(ALLOW_LIST_METADATA_KEY, shape)
 }

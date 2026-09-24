@@ -6,7 +6,7 @@ export { LineLoggerSubservice } from './logging/line-logger.subservice'
 export { errorToLogfmt, escapeForLogfmt, toLogfmt } from './logging/logfmt'
 
 // Sanitization
-export { AllowListService } from './sanitization/allow-list.service'
+export { LogAllowListService } from './sanitization/allow-list.service'
 export {
   birthNumberRedactor,
   emailRedactor,
@@ -39,7 +39,7 @@ export {
 export { AppLoggerMiddleware } from './middlewares/logger.middleware'
 
 // Decorators
-export { AllowList } from './decorators/allow-list.decorator'
+export { LogAllowList } from './decorators/allow-list.decorator'
 export {
   CatchDatabaseError,
   type IHasErrorFactoryService,
