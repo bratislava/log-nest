@@ -11,7 +11,7 @@ import { REDACT_METADATA_KEY } from '../sanitization/sanitize-metadata.keys'
  *
  * Attaches the names as reflected metadata (`SetMetadata`); it never touches
  * the method itself. `SanitizeMetadataInterceptor` (registered globally by
- * `SanitizationModule.forRoot()`) reads it via `Reflector`, combining
+ * `LogSanitizationModule.forRoot()`) reads it via `Reflector`, combining
  * controller + endpoint level, and writes the combined result to
  * `response.locals` before the handler runs.
  */

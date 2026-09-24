@@ -42,7 +42,7 @@ export class LogRedactionService {
    * always-applied: every `redact()` call runs them automatically, on top of
    * whatever names it's explicitly given, so a route doesn't need
    * `@LogRedact(...)` just to get the process-wide baseline. Configured via
-   * `SanitizationModule.forRoot(redactors)`.
+   * `LogSanitizationModule.forRoot(redactors)`.
    *
    * Use `register()` alone for redactors that should only run when a route
    * opts in by name via `@LogRedact('name')`.

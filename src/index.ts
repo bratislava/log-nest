@@ -13,9 +13,9 @@ export {
 } from './sanitization/default-redactors'
 export { LogRedactionService } from './sanitization/log-redaction.service'
 export {
-  SanitizationModule,
-  type SanitizationOptions,
-} from './sanitization/sanitization.module'
+  LogSanitizationModule,
+  type LogSanitizationOptions,
+} from './sanitization/logSanitizationModule'
 export { SanitizeMetadataInterceptor } from './sanitization/sanitize-metadata.interceptor'
 export type { AllowShape } from './sanitization/types/allow-list.types'
 export type {

@@ -27,7 +27,7 @@ import { SanitizeMetadata } from './types/redaction.types'
  * property of the one response object that outlives all of them - there's
  * no return value to lose metadata off in the first place.
  *
- * Registered globally by `SanitizationModule.forRoot()`, so no separate
+ * Registered globally by `LogSanitizationModule.forRoot()`, so no separate
  * `@UseInterceptors()` wiring is needed on top of what's already required.
  */
 @Injectable()

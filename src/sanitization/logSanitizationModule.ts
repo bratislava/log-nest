@@ -9,7 +9,7 @@ import { SanitizeMetadataInterceptor } from './sanitize-metadata.interceptor'
 import { AllowShape } from './types/allow-list.types'
 import { LogRedactor } from './types/redaction.types'
 
-export interface SanitizationOptions {
+export interface LogSanitizationOptions {
   /**
    * Redactors applied globally: `LogRedactionService.redact()` applies them to
    * every call automatically. Routes only need `@LogRedact(...)` for extra
@@ -42,15 +42,15 @@ export interface SanitizationOptions {
  * Register once at the app root:
  *
  * ```ts
- * imports: [ SanitizationModule.forRoot({ redactors: [piiRedactor], allowShape: { id: true } }) ]
+ * imports: [ LogSanitizationModule.forRoot({ redactors: [piiRedactor], allowShape: { id: true } }) ]
  * ```
  */
 @Global()
 @Module({})
-export class SanitizationModule {
-  static forRoot(options: SanitizationOptions = {}): DynamicModule {
+export class LogSanitizationModule {
+  static forRoot(options: LogSanitizationOptions = {}): DynamicModule {
     return {
-      module: SanitizationModule,
+      module: LogSanitizationModule,
       providers: [
         {
           provide: LogRedactionService,

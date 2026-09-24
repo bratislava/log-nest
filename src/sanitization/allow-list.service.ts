@@ -11,13 +11,13 @@ import { AllowShape } from './types/allow-list.types'
 // eslint-disable-next-line @darraghor/nestjs-typed/injectable-should-be-provided
 export class LogAllowListService {
   /**
-   * App-wide default, set via `SanitizationModule.forRoot()`. Defaults to
+   * App-wide default, set via `LogSanitizationModule.forRoot()`. Defaults to
    * `{}` (deny by default: nothing is logged until something allows it).
    */
   private globalShape: AllowShape = {}
 
   /**
-   * App-wide default, set via `SanitizationModule.forRoot()`. Defaults to
+   * App-wide default, set via `LogSanitizationModule.forRoot()`. Defaults to
    * `'omit'`, dropping disallowed keys/values entirely.
    */
   private onDisallowed: FilterByShapeOptions['onDisallowed'] = 'omit'
