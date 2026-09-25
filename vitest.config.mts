@@ -8,5 +8,7 @@ export default defineConfig({
     setupFiles: ['reflect-metadata', 'src/__tests__/logs.ts'],
     // hide console output from passing tests, keep it for failing ones
     silent: 'passed-only',
+    // also run the *.spec-d.ts type tests (through tsc)
+    typecheck: { enabled: true },
   },
 })
