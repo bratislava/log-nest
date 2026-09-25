@@ -454,7 +454,7 @@ npm ci             # install dependencies
 npm run build      # compile to dist/ (tsconfig.build.json)
 npm run typecheck  # tsc --noEmit
 npm run lint       # eslint (lint:fix to autofix, format for prettier)
-npm test           # jest (test:watch for watch mode)
+npm test           # vitest (test:watch for watch mode)
 ```
 
 ## License
