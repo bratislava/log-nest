@@ -55,7 +55,9 @@ export class LogSanitizationModule {
         {
           provide: LogRedactionService,
           useFactory: (errorFactoryService: ErrorFactoryService) => {
-            const redactionService = new LogRedactionService(errorFactoryService)
+            const redactionService = new LogRedactionService(
+              errorFactoryService,
+            )
             redactionService.registerGlobal(...(options.redactors ?? []))
             return redactionService
           },

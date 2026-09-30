@@ -19,7 +19,10 @@ function childShape(
  * `undefined` on one side means "no opinion" and the other side's shape is
  * used as-is, recursively.
  */
-export function mergeAllowShapes(a: LogAllowShape, b: LogAllowShape): LogAllowShape {
+export function mergeAllowShapes(
+  a: LogAllowShape,
+  b: LogAllowShape,
+): LogAllowShape {
   return mergeAllowShapesInternal(a, b) as LogAllowShape
 }
 

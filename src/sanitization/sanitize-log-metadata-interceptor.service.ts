@@ -34,10 +34,7 @@ import { SanitizeLogMetadata } from './types/redaction.types'
 export class SanitizeLogMetadataInterceptor implements NestInterceptor {
   constructor(private readonly reflector: Reflector) {}
 
-  intercept(
-    context: ExecutionContext,
-    next: CallHandler,
-  ): Observable<unknown> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     if (context.getType() === 'http') {
       const metadata = this.resolveMetadata(context)
       if (metadata !== undefined) {

@@ -22,10 +22,11 @@ import { FromAxiosErrorOptions } from './status-override'
  * so the direct index would be a compile error until something adds the
  * property.
  */
-export type DefaultErrorEnum =
-  LogNestErrorEnumRegistry extends { errorEnum: infer TRegistered }
-    ? TRegistered
-    : string
+export type DefaultErrorEnum = LogNestErrorEnumRegistry extends {
+  errorEnum: infer TRegistered
+}
+  ? TRegistered
+  : string
 
 /**
  * Arguments for the per-status factory methods of {@link ErrorFactoryService}.
