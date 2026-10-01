@@ -88,15 +88,32 @@ export class AppLoggerMiddleware implements NestMiddleware {
       response.locals.errorLogData = undefined
 
       response.send = send
+      let sendError: unknown
       try {
         return response.send(exitData)
+      } catch (error) {
+        sendError = error
+        throw error
       } finally {
         this.logExit(
           response,
           context,
           this.sanitizeToJson(redactorNames, allowShape, body),
           responseLogData,
-          errorLogData,
+          sendError === undefined
+            ? errorLogData
+            : {
+                ...errorLogData,
+                // the response never went out, so this always alerts
+                ...(sendError instanceof Error
+                  ? {
+                      errorType: sendError.name,
+                      message: sendError.message,
+                      stack: sendError.stack,
+                    }
+                  : { errorType: `UnexpectedErrorType: ${typeof sendError}` }),
+                alert: 1,
+              },
         )
       }
     }
