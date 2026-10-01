@@ -104,8 +104,8 @@ class ExoticController {
   @Post('redirect')
   @Redirect('https://example.com/target', 302)
   @LogRedact('email')
-  redirectReturn(): void {
-  }
+  // eslint-disable-next-line @typescript-eslint/no-empty-function -- @Redirect's static url/status does all the work
+  redirectReturn(): void {}
 }
 
 @Controller('bare')
