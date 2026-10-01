@@ -47,6 +47,15 @@ class ErrorDemoController {
     })
   }
 
+  @Get('factory-error-console-string')
+  factoryErrorConsoleString(): never {
+    throw this.errorFactory.InternalServerErrorException({
+      errorEnum: ErrorEnum.INTERNAL_SERVER_ERROR,
+      message: 'Something broke',
+      console: 'extra context as a string',
+    })
+  }
+
   @Get('factory-error-with-cause')
   factoryErrorWithCause(): never {
     throw this.errorFactory.BadGatewayException({
@@ -117,6 +126,16 @@ describe('error.filter e2e', () => {
 
     const line = loggedLineFor('/factory-error')
     expect(line.detail).toBe('extra context')
+  })
+
+  it('a string `console` reaches the log line as one console pair', async () => {
+    await request(app.getHttpServer())
+      .get('/factory-error-console-string')
+      .expect(500)
+
+    expect(loggedLineFor('/factory-error-console-string').console).toBe(
+      'extra context as a string',
+    )
   })
 
   it('ErrorFactoryService records the cause chain in the log, not the client body', async () => {
