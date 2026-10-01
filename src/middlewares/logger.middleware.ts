@@ -214,7 +214,7 @@ export class AppLoggerMiddleware implements NestMiddleware {
   private logExit(
     response: Response,
     context: RequestLogContext,
-    requestBodyLog: string,
+    requestBodyLog: string | undefined,
     responseDataLog: string,
     extra?: Record<string, unknown>,
   ): void {
@@ -222,7 +222,9 @@ export class AppLoggerMiddleware implements NestMiddleware {
     const logObj: Record<string, string | number> = {
       ...this.buildBaseLogObj(context),
       statusCode: response.statusCode,
-      'request-body': requestBodyLog,
+      ...(requestBodyLog === undefined
+        ? {}
+        : { 'request-body': requestBodyLog }),
       'response-data': responseDataLog,
       ...extra,
     }
