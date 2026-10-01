@@ -190,7 +190,8 @@ export class AppLoggerMiddleware implements NestMiddleware {
     redactorNames: readonly string[],
     allowShape: LogAllowShape | undefined,
     value: unknown,
-  ): string {
+  ): string | undefined {
+    // undefined when there's nothing to log (e.g. a request with no body)
     return JSON.stringify(this.sanitize(redactorNames, allowShape, value))
   }
 
