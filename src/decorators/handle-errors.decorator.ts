@@ -1,3 +1,4 @@
+import { ErrorSymbols } from '../errors/error-symbols'
 import { LineLoggerService } from '../logging/line-logger.service'
 
 /**
