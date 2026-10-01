@@ -100,7 +100,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       HttpExceptionFilter.name,
       status,
       rawBody,
-      'HttpException',
+      exception.name,
       exception.stack,
     )
   }
