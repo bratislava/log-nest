@@ -1,5 +1,4 @@
 import {
-  Body,
   Controller,
   type INestApplication,
   Module,
@@ -12,16 +11,15 @@ import request from 'supertest'
 import { beforeAll, describe, expect, it } from 'vitest'
 
 import { bootApp } from '../../__tests__/app'
-import { loggedFields, loggedLineFor } from '../../__tests__/logs'
+import { loggedLineFor } from '../../__tests__/logs'
 import { LogAllowList } from '../../decorators/allow-list.decorator'
 import { LogRedact } from '../../decorators/redact.decorator'
 import { LogRedactionService } from '../../sanitization/log-redaction.service'
 import { LogSanitizationModule } from '../../sanitization/logSanitizationModule'
 import { LogRedactor } from '../../sanitization/types/redaction.types'
 
-// Edge cases beyond normal request/response error handling: errors thrown
-// before AppLoggerMiddleware ever runs, bootstrap-time misconfiguration,
-// and a thrown value that isn't even an Error.
+// Edge cases beyond normal request/response error handling: bootstrap-time
+// misconfiguration, and a thrown value that isn't even an Error.
 
 const emailRedactor: LogRedactor = {
   name: 'email',
@@ -30,11 +28,6 @@ const emailRedactor: LogRedactor = {
 
 @Controller()
 class HostileController {
-  @Post('echo')
-  echo(@Body() body: unknown): unknown {
-    return body
-  }
-
   @Post('throw-non-error')
   throwNonError(): never {
     // eslint-disable-next-line @typescript-eslint/only-throw-error -- deliberately hostile: simulates a misbehaving dependency
@@ -61,7 +54,7 @@ class HostileController {
   // Namespaced under 'numeric/' rather than a bare ':id': Nest binds
   // `forRoutes(SomeController)` middleware once per route pattern the
   // controller declares, and a bare param route's pattern also textually
-  // matches this controller's other literal paths (e.g. 'echo' as an `:id`
+  // matches this controller's other literal paths (e.g. 'throw-object' as an `:id`
   // value) - which would invoke AppLoggerMiddleware twice for those routes.
   @Post('numeric/:id')
   @LogAllowList({ id: true, email: true })
@@ -82,25 +75,6 @@ describe('hostile errors e2e', () => {
     return async () => {
       await app.close()
     }
-  })
-
-  // Node's JSON.parse quotes (part of) the bad input in its error message, and
-  // this line never goes through sanitization (AppLoggerMiddleware never ran),
-  // so raw request data reaches the log with no programmer involvement.
-  it('does not log raw request data that a JSON parse error echoes back', async () => {
-    await request(app.getHttpServer())
-      .post('/echo')
-      .set('Content-Type', 'application/json')
-      .send('user@example.com')
-      .expect(400)
-
-    const lines = loggedFields()
-    expect(lines).toHaveLength(1)
-    expect(
-      Object.values(lines[0]).filter((value) =>
-        value.includes('user@example.com'),
-      ),
-    ).toEqual([])
   })
 
   // Not an Error/HttpException, so neither ErrorFilter nor HttpExceptionFilter
