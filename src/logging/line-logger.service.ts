@@ -31,7 +31,7 @@ function getCurrentDateTime(): string {
  *
  * Usable two ways:
  * - Manually: `new LineLoggerService('MyContext')`.
- * - Via DI: `constructor(private readonly logger: LineLoggerSservice) {}` in
+ * - Via DI: `constructor(private readonly logger: LineLoggerService) {}` in
  * any `@Injectable()` class. Each consumer will be given its own instance, auto
  * named after the consuming class.
  */
