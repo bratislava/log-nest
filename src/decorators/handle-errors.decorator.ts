@@ -21,7 +21,7 @@ export function HandleErrors(
 ): MethodDecorator {
   return function (
     _target: object,
-    _propertyKey: string | symbol,
+    propertyKey: string | symbol,
     descriptor: PropertyDescriptor,
   ): PropertyDescriptor {
     const originalMethod: unknown = descriptor.value
@@ -43,6 +43,13 @@ export function HandleErrors(
       try {
         return await method.apply(this, args)
       } catch (error) {
+        if (
+          typeof error === 'object' &&
+          error !== null &&
+          !(ErrorSymbols.methodName in error)
+        ) {
+          Reflect.set(error, ErrorSymbols.methodName, propertyKey)
+        }
         logger.error(error)
         return null
       }
