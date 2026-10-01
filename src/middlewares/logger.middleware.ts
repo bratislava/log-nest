@@ -87,16 +87,18 @@ export class AppLoggerMiddleware implements NestMiddleware {
         Record<string, unknown> | undefined
       response.locals.errorLogData = undefined
 
-      this.logExit(
-        response,
-        context,
-        this.sanitizeToJson(redactorNames, allowShape, body),
-        responseLogData,
-        errorLogData,
-      )
-
       response.send = send
-      return response.send(exitData)
+      try {
+        return response.send(exitData)
+      } finally {
+        this.logExit(
+          response,
+          context,
+          this.sanitizeToJson(redactorNames, allowShape, body),
+          responseLogData,
+          errorLogData,
+        )
+      }
     }
   }
 
