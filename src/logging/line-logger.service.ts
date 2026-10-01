@@ -81,6 +81,8 @@ export class LineLoggerService implements LoggerService {
 
     const formattedOtherItems = otherItems
       .map((item) => toLogfmt(item))
+      // an empty object formats to '', which would leave a double space
+      .filter(Boolean)
       .join(' ')
 
     const formattedContext = this.context ? `context="${this.context}"` : ''
