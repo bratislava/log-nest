@@ -1,5 +1,6 @@
 import { HttpStatus } from '@nestjs/common'
 import { AxiosError, AxiosHeaders, InternalAxiosRequestConfig } from 'axios'
+import { beforeEach, describe, expect, it } from 'vitest'
 
 import { ErrorEnum, ErrorResponseEnum } from '../base-errors.enum'
 import { ErrorFactoryService } from '../error-factory.service'
@@ -10,7 +11,6 @@ describe('ErrorFactoryService', () => {
   let errorFactoryService: ErrorFactoryService
 
   beforeEach(() => {
-    jest.resetAllMocks()
     // alertReporting is injected via NestLoggingModule.forRoot() in the app; here
     // we construct the errorFactoryService directly with the list the alert assertions rely on.
     errorFactoryService = new ErrorFactoryService({
@@ -21,12 +21,8 @@ describe('ErrorFactoryService', () => {
     })
   })
 
-  it('should be defined', () => {
-    expect(errorFactoryService).toBeDefined()
-  })
-
   describe('alerting', () => {
-    it('should alert', () => {
+    it('alerts for an errorEnum listed in alertReporting', () => {
       const result = errorFactoryService
         .BadRequestException({
           errorEnum: ErrorEnum.DATABASE_ERROR,
@@ -37,7 +33,7 @@ describe('ErrorFactoryService', () => {
       expect(result[ErrorSymbols.alert]).toBe(1)
     })
 
-    it('should not alert', () => {
+    it('does not alert for an errorEnum not listed in alertReporting', () => {
       const result = errorFactoryService
         .BadRequestException({
           errorEnum: ErrorEnum.NOT_FOUND_ERROR,
@@ -88,26 +84,6 @@ describe('ErrorFactoryService', () => {
     }
 
     describe('statusOverrides branch', () => {
-      it('maps the downstream status to override status/errorEnum/message', () => {
-        const error = createMockAxiosError({ status: HttpStatus.NOT_FOUND })
-
-        const result = errorFactoryService.fromAxiosError(error, {
-          statusOverrides: {
-            404: {
-              status: HttpStatus.NOT_FOUND,
-              errorEnum: ErrorEnum.NOT_FOUND_ERROR,
-              message: 'Downstream resource missing',
-            },
-          },
-        })
-
-        expect(result.getStatus()).toBe(HttpStatus.NOT_FOUND)
-        const response = result.getResponse() as ResponseErrorInternalDto
-        expect(response.errorName).toBe(ErrorEnum.NOT_FOUND_ERROR)
-        expect(response.message).toBe('Downstream resource missing')
-        expect(response.status).toBe('Not Found')
-      })
-
       it('takes precedence over the 503 + retry-after branch', () => {
         const error = createMockAxiosError({
           status: HttpStatus.SERVICE_UNAVAILABLE,
@@ -128,6 +104,7 @@ describe('ErrorFactoryService', () => {
         const response = result.getResponse() as ResponseErrorInternalDto
         expect(response.errorName).toBe(ErrorEnum.BAD_REQUEST_ERROR)
         expect(response.message).toBe('Override wins')
+        expect(response.status).toBe('Bad Request')
       })
 
       it('ignores options.errorEnumOverwrite and options.message on the override path', () => {
@@ -226,7 +203,7 @@ describe('ErrorFactoryService', () => {
         ['401', HttpStatus.UNAUTHORIZED],
         ['403', HttpStatus.FORBIDDEN],
       ] as const)(
-        'maps %s to BadGateway with BAD_GATEWAY_AUTH_ERROR and alerts',
+        'maps %s to BadGateway with BAD_GATEWAY_AUTH_ERROR',
         (_, status) => {
           const error = createMockAxiosError({ status })
 
