@@ -14,15 +14,18 @@ const LEADING_COLOR = /^\u001B\[\d+m/
 const TRAILING_RESET = /\u001B\[0m$/
 
 const lines: string[] = []
+const rawLines: string[] = []
 let consoleSpy: MockInstance<typeof console.log> | undefined
 
 beforeEach(() => {
   lines.length = 0
+  rawLines.length = 0
   // eslint-disable-next-line no-console -- keeping a handle on the real one to pass lines through
   const original = console.log
   consoleSpy = vi
     .spyOn(console, 'log')
     .mockImplementation((...args: unknown[]) => {
+      rawLines.push(args.join(' '))
       lines.push(
         args.join(' ').replace(LEADING_COLOR, '').replace(TRAILING_RESET, ''),
       )
@@ -35,11 +38,16 @@ afterEach(() => {
 })
 
 /**
- * The raw lines logged by the current test so far, without the logger's color wrapping.
+ * The lines logged by the current test so far, without the logger's color wrapping.
  * Only for tests about the exact text; everything else uses loggedFields().
  */
 export function loggedLines(): string[] {
   return lines
+}
+
+/** The lines logged by the current test so far, exactly as written, color codes included. */
+export function loggedRawLines(): string[] {
+  return rawLines
 }
 
 /** Every line logged by the current test so far, parsed with fieldsOf. */
