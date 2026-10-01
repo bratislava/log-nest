@@ -41,6 +41,7 @@ function respondOrLog(
   rawBody: object,
   errorType: string,
   stack: string | undefined,
+  message?: string,
 ): void {
   const response = host.switchToHttp().getResponse<Response>()
   response.status(statusCode)
@@ -55,6 +56,7 @@ function respondOrLog(
       ...responseLog,
       errorType,
       ...(stack === undefined ? {} : { stack }),
+      ...(message === undefined ? {} : { message }),
     }
     response.json(responseMessage)
     return
@@ -142,6 +144,10 @@ export class UnknownExceptionFilter implements ExceptionFilter {
       },
       errorType,
       undefined,
+      // a thrown primitive is its own content; objects have no single message
+      typeof exception === 'object' && exception !== null
+        ? undefined
+        : String(exception),
     )
   }
 }
