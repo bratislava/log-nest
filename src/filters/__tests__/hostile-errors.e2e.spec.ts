@@ -42,7 +42,7 @@ class HostileController {
 
   @Post('throw-null-prototype')
   throwNullPrototype(): never {
-    // eslint-disable-next-line @typescript-eslint/only-throw-error -- deliberately hostile: no prototype, so no constructor to name it by
+     
     throw Object.create(null)
   }
 
