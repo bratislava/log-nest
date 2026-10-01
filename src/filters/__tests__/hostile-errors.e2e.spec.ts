@@ -42,7 +42,6 @@ class HostileController {
 
   @Post('throw-null-prototype')
   throwNullPrototype(): never {
-     
     throw Object.create(null)
   }
 
