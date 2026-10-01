@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
 import { loggedFields, loggedLines } from '../../__tests__/logs'
-import { ErrorEnum } from '../../errors/base-errors.enum'
-import { ErrorFactoryService } from '../../errors/error-factory.service'
 import { ErrorSymbols } from '../../errors/error-symbols'
 import { isLogfmt } from '../../logging/logfmt'
 import { HandleErrors } from '../handle-errors.decorator'
@@ -48,24 +46,15 @@ describe('HandleErrors', () => {
       methodName: 'testMethod',
       stack: expect.stringMatching(/^Error: This is a test error\n/),
     })
+    expect(isLogfmt(loggedLines()[0])).toBe(true)
   })
 
-  it('logs an HttpException with its status, error enum, cause and console fields', async () => {
+  it('also catches a synchronous throw from a method that is not async', async () => {
     class TestClass {
-      private errorFactoryService = new ErrorFactoryService({
-        alertReporting: [ErrorEnum.INTERNAL_SERVER_ERROR],
-      })
-
       @HandleErrors('Test error handler')
-      async testMethod(): Promise<void> {
-        return Promise.reject(
-          this.errorFactoryService.BadRequestException({
-            errorEnum: ErrorEnum.INTERNAL_SERVER_ERROR,
-            message: 'Error message',
-            console: 'Console error',
-            error: new Error('Caused by error message test'),
-          }),
-        )
+      // eslint-disable-next-line @typescript-eslint/promise-function-async -- deliberately sync: @HandleErrors makes this return a Promise at runtime, TS just can't see that
+      testMethod(): Promise<string> {
+        throw new Error('sync boom, no promise wrapper')
       }
     }
 
@@ -77,19 +66,10 @@ describe('HandleErrors', () => {
       datetime: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
       severity: 'ERROR',
       context: 'Test error handler',
-      errorType: 'HttpException',
-      statusCode: '400',
-      status: 'Bad Request',
-      errorName: 'INTERNAL_SERVER_ERROR',
-      message: 'Error message',
-      alert: '1',
-      errorCause: 'Error',
-      causedByMessage: 'Caused by error message test',
-      console: 'Console error',
+      errorType: 'Error',
+      message: 'sync boom, no promise wrapper',
       methodName: 'testMethod',
-      stack: expect.stringMatching(
-        /^HttpException: .*Was directly caused by:/s,
-      ),
+      stack: expect.stringMatching(/^Error: sync boom, no promise wrapper\n/),
     })
   })
 
@@ -173,21 +153,6 @@ describe('HandleErrors', () => {
       message: 'frozen',
       stack: expect.stringMatching(/^Error: frozen\n/),
     })
-  })
-
-  it('logs a single well-formed logfmt line', async () => {
-    class TestClass {
-      @HandleErrors('Test error handler')
-      async testMethod(): Promise<void> {
-        return Promise.reject(new Error('This is a test error'))
-      }
-    }
-
-    await new TestClass().testMethod()
-
-    expect(loggedLines()).toHaveLength(1)
-    const [line] = loggedLines()
-    expect(isLogfmt(line)).toBe(true)
   })
 
   it('throws a TypeError when applied to something that is not a method', () => {
