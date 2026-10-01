@@ -2,7 +2,7 @@
 export { NestLoggingModule } from './logging.module'
 
 // Logging
-export { LineLoggerSubservice } from './logging/line-logger.subservice'
+export { LineLoggerService } from './logging/line-logger.service'
 export { errorToLogfmt, escapeForLogfmt, toLogfmt } from './logging/logfmt'
 
 // Sanitization

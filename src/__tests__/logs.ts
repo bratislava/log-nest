@@ -5,7 +5,7 @@ import { afterEach, beforeEach, expect, type MockInstance, vi } from 'vitest'
 // real console.log, where `silent: 'passed-only'` shows it only for failing
 // tests.
 
-// The color code LineLoggerSubservice puts at the start and the reset at the
+// The color code LineLoggerService puts at the start and the reset at the
 // end. Only those are stripped; any in the middle weren't added by the logger,
 // so they stay visible.
 // eslint-disable-next-line no-control-regex -- matching the ANSI color codes themselves

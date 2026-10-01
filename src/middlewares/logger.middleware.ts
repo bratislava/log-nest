@@ -1,7 +1,7 @@
 import { Injectable, NestMiddleware } from '@nestjs/common'
 import { NextFunction, Request, Response } from 'express'
 
-import { LineLoggerSubservice } from '../logging/line-logger.subservice'
+import { LineLoggerService } from '../logging/line-logger.service'
 import { LogAllowListService } from '../sanitization/allow-list.service'
 import { LogRedactionService } from '../sanitization/log-redaction.service'
 import { LogAllowShape } from '../sanitization/types/allow-list.types'
@@ -215,7 +215,7 @@ export class AppLoggerMiddleware implements NestMiddleware {
     responseDataLog: string,
     extra?: Record<string, unknown>,
   ): void {
-    const logger = new LineLoggerSubservice(response.statusMessage)
+    const logger = new LineLoggerService(response.statusMessage)
     const logObj: Record<string, string | number> = {
       ...this.buildBaseLogObj(context),
       statusCode: response.statusCode,
@@ -227,7 +227,7 @@ export class AppLoggerMiddleware implements NestMiddleware {
   }
 
   private emitAtSeverity(
-    logger: LineLoggerSubservice,
+    logger: LineLoggerService,
     statusCode: number,
     logObj: Record<string, string | number>,
   ): void {

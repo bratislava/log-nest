@@ -1,7 +1,7 @@
-import { LineLoggerSubservice } from '../logging/line-logger.subservice'
+import { LineLoggerService } from '../logging/line-logger.service'
 
 /**
- * Logs (via {@link LineLoggerSubservice}) and swallows any error thrown by the
+ * Logs (via {@link LineLoggerService}) and swallows any error thrown by the
  * decorated method, resolving to `null` instead of propagating. Intended for
  * fire-and-forget tasks such as cron jobs or background work.
  *
@@ -33,7 +33,7 @@ export function HandleErrors(
       this: unknown,
       ...args: unknown[]
     ) => unknown
-    const logger = new LineLoggerSubservice(loggerName)
+    const logger = new LineLoggerService(loggerName)
 
     descriptor.value = async function errorHandlerWrapper(
       this: unknown,

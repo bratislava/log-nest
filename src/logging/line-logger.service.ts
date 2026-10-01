@@ -30,15 +30,15 @@ function getCurrentDateTime(): string {
  * non-string args are serialized via {@link toLogfmt}.
  *
  * Usable two ways:
- * - Manually: `new LineLoggerSubservice('MyContext')`.
- * - Via DI: `constructor(private readonly logger: LineLoggerSubservice) {}` in
+ * - Manually: `new LineLoggerService('MyContext')`.
+ * - Via DI: `constructor(private readonly logger: LineLoggerSservice) {}` in
  * any `@Injectable()` class. Each consumer will be given its own instance, auto
  * named after the consuming class.
  */
 // Provided dynamically via NestLoggingModule.forRoot(), which the static plugin can't detect.
 @Injectable({ scope: Scope.TRANSIENT })
 // eslint-disable-next-line @darraghor/nestjs-typed/injectable-should-be-provided
-export class LineLoggerSubservice implements LoggerService {
+export class LineLoggerService implements LoggerService {
   protected readonly context?: string
 
   protected readonly color: boolean

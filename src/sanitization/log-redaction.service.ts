@@ -4,7 +4,7 @@ import { Injectable } from '@nestjs/common'
 
 import { ErrorEnum, ErrorResponseEnum } from '../errors/base-errors.enum'
 import { ErrorFactoryService } from '../errors/error-factory.service'
-import { LineLoggerSubservice } from '../logging/line-logger.subservice'
+import { LineLoggerService } from '../logging/line-logger.service'
 import { LogRedactor } from './types/redaction.types'
 
 type RedactedValue<T> = unknown extends T
@@ -21,7 +21,7 @@ export class LogRedactionService {
   /** Names merged into every `redact()` call. See {@link registerGlobal}. */
   private readonly globalNames: string[] = []
 
-  private readonly logger = new LineLoggerSubservice(LogRedactionService.name)
+  private readonly logger = new LineLoggerService(LogRedactionService.name)
 
   constructor(private readonly errorFactoryService: ErrorFactoryService) {}
 

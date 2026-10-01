@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common'
 import { Response } from 'express'
 
-import { LineLoggerSubservice } from '../logging/line-logger.subservice'
+import { LineLoggerService } from '../logging/line-logger.service'
 import { separateLogFromResponseObj } from '../logging/logfmt'
 
 function rethrowIfNotHttp(
@@ -16,7 +16,7 @@ function rethrowIfNotHttp(
   filterName: string,
 ): void {
   if (host.getType() !== 'http') {
-    const logger = new LineLoggerSubservice(`${filterName} non HTTP`)
+    const logger = new LineLoggerService(`${filterName} non HTTP`)
     logger.error(exception)
     throw exception
   }
@@ -56,7 +56,7 @@ function respondOrLog(
     return
   }
 
-  new LineLoggerSubservice(filterName).error(exception, responseLog)
+  new LineLoggerService(filterName).error(exception, responseLog)
   response.json(responseMessage)
 }
 
