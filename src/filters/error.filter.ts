@@ -51,7 +51,11 @@ function respondOrLog(
     // `response.locals.sanitizeMetadata` was already written by
     // SanitizeLogMetadataInterceptor before the handler ran, and survives a
     // thrown error the same as a normal return - nothing to forward here.
-    response.locals.errorLogData = { ...responseLog, errorType, stack }
+    response.locals.errorLogData = {
+      ...responseLog,
+      errorType,
+      ...(stack === undefined ? {} : { stack }),
+    }
     response.json(responseMessage)
     return
   }
