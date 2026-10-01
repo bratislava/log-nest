@@ -1,13 +1,13 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
-  "display": "NestJS library + CommonJS + Strictest",
+  "display": "NestJS library + ESM + Strictest",
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": ".",
     "lib": ["es2023"],
-    "module": "nodenext",
-    "target": "es2022",
-    "moduleResolution": "nodenext",
+    "module": "esnext",
+    "target": "es2023",
+    "moduleResolution": "bundler",
     "types": ["node"],
     "declaration": true,
     "declarationMap": true,

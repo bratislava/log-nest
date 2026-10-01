@@ -33,6 +33,8 @@ Everything else follows from that:
 
 `npm i @bratislava/log-nest`
 
+Requires NestJS 12 and Node 24. The package is ESM-only; CommonJS apps load it through `require(esm)`.
+
 ## Using the library
 
 ### Quick start
@@ -451,11 +453,13 @@ Requires node 24 (see `engines` in `package.json`; [volta](https://volta.sh/) pi
 
 ```sh
 npm ci             # install dependencies
-npm run build      # compile to dist/ (tsconfig.build.json)
+npm run build      # type-check, then build dist/ with tsdown
 npm run typecheck  # tsc --noEmit
 npm run lint       # eslint (lint:fix to autofix, format for prettier)
 npm test           # vitest (test:watch for watch mode)
 ```
+
+Source imports have no file extensions, tsdown adds `.js` in `dist/`. Don't use top-level await in `src`, `require(esm)` can't load modules that use it.
 
 ## License
 
