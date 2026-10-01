@@ -11,7 +11,7 @@ type RedactedValue<T> = unknown extends T
   ? unknown
   : T extends object
     ? T
-    : string
+    : T | string
 
 @Injectable()
 // eslint-disable-next-line @darraghor/nestjs-typed/injectable-should-be-provided
@@ -59,10 +59,11 @@ export class LogRedactionService {
    * are left as-is), so the returned value keeps `value`'s shape and type.
    * Anything else (number, boolean, bigint, null, ...) has no shape to
    * preserve: it is best-effort JSON-stringified and redacted as a string
-   * instead. `RedactedValue<T>` encodes exactly that split (object in gives
-   * `T` back, everything else gives back a `string`), so the type is
-   * enforced by the compiler rather than asserted by a cast at the call
-   * site.
+   * instead, and what JSON.stringify can't represent (bigint, symbol,
+   * undefined, ...) comes back unchanged. `RedactedValue<T>` encodes that
+   * split (object in gives `T` back, anything else gives back `T` or a
+   * `string`), so the type is enforced by the compiler rather than asserted
+   * by a cast at the call site.
    *
    * Delegates to {@link applyRedactors} so the global-names merge happens
    * once here, not on every recursive step.
