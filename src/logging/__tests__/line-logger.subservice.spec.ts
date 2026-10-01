@@ -1,23 +1,18 @@
-import { LineLoggerSubservice } from '../line-logger.subservice'
+import { beforeEach, describe, expect, it, test } from 'vitest'
+
+import { loggedFields, loggedLines } from '../../__tests__/logs'
+import { LineLoggerService } from '../line-logger.service'
 
 describe('LineLoggerService', () => {
-  let service: LineLoggerSubservice
-  let consoleSpy: jest.SpyInstance
-
+  let service: LineLoggerService
   beforeEach(() => {
-    service = new LineLoggerSubservice('LineLogger TEST')
-    consoleSpy = jest.spyOn(console, 'log')
-    consoleSpy.mockImplementation(jest.fn())
-  })
-
-  afterEach(() => {
-    consoleSpy.mockRestore()
+    service = new LineLoggerService('LineLogger TEST')
   })
 
   test.each<
     [
       keyof Pick<
-        LineLoggerSubservice,
+        LineLoggerService,
         'log' | 'error' | 'warn' | 'debug' | 'verbose' | 'fatal'
       >,
       string,
@@ -33,22 +28,87 @@ describe('LineLoggerService', () => {
     // eslint-disable-next-line security/detect-object-injection
     service[method]('test message')
 
-    // eslint-disable-next-line security/detect-non-literal-regexp
-    const regex = new RegExp(
-      `process="\\[Nest]" processPID="\\d+" datetime="\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.\\d{3}Z" severity="${severity}" context="LineLogger TEST" message="test message"`,
-    )
-
-    expect(consoleSpy).toHaveBeenCalledWith(expect.stringMatching(regex))
-    expect(consoleSpy).toHaveBeenCalledTimes(1)
+    expect(loggedFields()).toEqual([
+      {
+        process: '[Nest]',
+        processPID: expect.stringMatching(/^\d+$/),
+        datetime: expect.stringMatching(
+          /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
+        ),
+        severity,
+        context: 'LineLogger TEST',
+        message: 'test message',
+      },
+    ])
   })
 
   it('should print log message with object as message', () => {
     service.log({ foo: 'string' })
 
-    const regex =
-      /process="\[Nest]" processPID="\d+" datetime="\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z" severity="LOG" context="LineLogger TEST" foo="string"/
-
-    expect(consoleSpy).toHaveBeenCalledWith(expect.stringMatching(regex))
-    expect(consoleSpy).toHaveBeenCalledTimes(1)
+    expect(loggedFields()).toEqual([
+      {
+        process: '[Nest]',
+        processPID: expect.stringMatching(/^\d+$/),
+        datetime: expect.stringMatching(
+          /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
+        ),
+        severity: 'LOG',
+        context: 'LineLogger TEST',
+        foo: 'string',
+      },
+    ])
   })
+
+  // Format only: each pair's own content is covered above and in logfmt.spec.
+  it.each<[string, (logger: LineLoggerService) => void]>([
+    [
+      'a string message',
+      (logger) => {
+        logger.log('test message')
+      },
+    ],
+    [
+      'an object',
+      (logger) => {
+        logger.log({ foo: 'string' })
+      },
+    ],
+    [
+      'an Error',
+      (logger) => {
+        logger.error(new Error('boom'))
+      },
+    ],
+    [
+      'an Error and an empty object',
+      (logger) => {
+        logger.error(new Error('boom'), {})
+      },
+    ],
+    [
+      'an empty object between other params',
+      (logger) => {
+        logger.error(new Error('boom'), {}, { a: 1 })
+      },
+    ],
+    [
+      'strings mixed with objects',
+      (logger) => {
+        logger.warn('first', { a: 1 }, 'second', { b: 2 })
+      },
+    ],
+  ])(
+    'writes %s as key="value" pairs separated by exactly one space',
+    (_, logOnce) => {
+      logOnce(service)
+
+      expect(loggedLines()).toHaveLength(1)
+      const [line] = loggedLines()
+      // one pair, then any number of " pair": nothing before, after or between
+      expect(line).toMatch(
+        // eslint-disable-next-line security/detect-unsafe-regex -- the value alternatives are mutually exclusive, so no catastrophic backtracking
+        /^[^\s="]+="(?:[^"\\\n]|\\.)*"(?: [^\s="]+="(?:[^"\\\n]|\\.)*")*$/,
+      )
+    },
+  )
 })
