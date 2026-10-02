@@ -95,26 +95,34 @@ export class AppLoggerMiddleware implements NestMiddleware {
         sendError = error
         throw error
       } finally {
-        this.logExit(
-          response,
-          context,
-          this.sanitizeToJson(redactorNames, allowShape, body),
-          responseLogData,
-          sendError === undefined
-            ? errorLogData
-            : {
-                ...errorLogData,
-                // the response never went out, so this always alerts
-                ...(sendError instanceof Error
-                  ? {
-                      errorType: sendError.name,
-                      message: sendError.message,
-                      stack: sendError.stack,
-                    }
-                  : { errorType: `UnexpectedErrorType: ${typeof sendError}` }),
-                alert: 1,
-              },
-        )
+        try {
+          this.logExit(
+            response,
+            context,
+            this.sanitizeToJson(redactorNames, allowShape, body),
+            responseLogData,
+            sendError === undefined
+              ? errorLogData
+              : {
+                  ...errorLogData,
+                  // the response never went out, so this always alerts
+                  ...(sendError instanceof Error
+                    ? {
+                        errorType: sendError.name,
+                        message: sendError.message,
+                        stack: sendError.stack,
+                      }
+                    : {
+                        errorType: `UnexpectedErrorType: ${typeof sendError}`,
+                      }),
+                  alert: 1,
+                },
+          )
+        } catch (logError) {
+          new LineLoggerService(AppLoggerMiddleware.name).error(logError, {
+            alert: 1,
+          })
+        }
       }
     }
   }
