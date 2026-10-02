@@ -173,7 +173,7 @@ describe('AppLoggerMiddleware e2e', () => {
     expect(line['response-data']).toBe('not valid json{')
   })
 
-  it('logs a failed send as an alerting ERROR line with everything it has, and still fails the request', async () => {
+  it('logs a failed send as a single alerting ERROR line with everything it has, and still fails the request', async () => {
     await request(app.getHttpServer()).get('/send-throws').expect(500)
 
     // no context: Node never got as far as setting statusMessage
@@ -195,5 +195,7 @@ describe('AppLoggerMiddleware e2e', () => {
       'response-data': 'x',
       alert: '1',
     })
+    // ErrorFilter handles the rethrown error too, but mustn't log it again
+    expect(loggedFields()).toHaveLength(1)
   })
 })
