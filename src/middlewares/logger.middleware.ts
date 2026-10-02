@@ -86,13 +86,38 @@ export class AppLoggerMiddleware implements NestMiddleware {
       response.locals.errorLogData = undefined
 
       response.send = send
-      let sendError: unknown
+      let exitLogData = errorLogData
       try {
         const result = response.send(exitData)
         response.locals.middlewareUsed = undefined
         return result
       } catch (error) {
-        sendError = error
+        if (errorLogData === undefined) {
+          exitLogData =
+            error instanceof Error
+              ? {
+                  errorType: error.name,
+                  message: error.message,
+                  stack: error.stack,
+                  alert: 1,
+                }
+              : { errorType: `UnexpectedErrorType: ${typeof error}`, alert: 1 }
+        } else {
+          exitLogData =
+            error instanceof Error
+              ? {
+                  ...errorLogData,
+                  sendErrorType: error.name,
+                  sendErrorMessage: error.message,
+                  sendErrorStack: error.stack,
+                  alert: 1,
+                }
+              : {
+                  ...errorLogData,
+                  sendErrorType: `UnexpectedErrorType: ${typeof error}`,
+                  alert: 1,
+                }
+        }
         throw error
       } finally {
         try {
@@ -101,22 +126,7 @@ export class AppLoggerMiddleware implements NestMiddleware {
             context,
             this.sanitizeToJson(redactorNames, allowShape, body),
             responseLogData,
-            sendError === undefined
-              ? errorLogData
-              : {
-                  ...errorLogData,
-                  // the response never went out, so this always alerts
-                  ...(sendError instanceof Error
-                    ? {
-                        errorType: sendError.name,
-                        message: sendError.message,
-                        stack: sendError.stack,
-                      }
-                    : {
-                        errorType: `UnexpectedErrorType: ${typeof sendError}`,
-                      }),
-                  alert: 1,
-                },
+            exitLogData,
           )
         } catch (logError) {
           new LineLoggerService(AppLoggerMiddleware.name).error(logError, {
