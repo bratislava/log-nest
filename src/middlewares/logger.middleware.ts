@@ -55,8 +55,6 @@ export class AppLoggerMiddleware implements NestMiddleware {
   ): void {
     const { send } = response
     response.send = (exitData?: ExitData) => {
-      response.locals.middlewareUsed = undefined
-
       // `SanitizeLogMetadataInterceptor` wrote this before the handler ran, if
       // `@LogAllowList`/`@LogRedact` applied to it - independent of `exitData`,
       // which by now might be the stringified body, not the original value.
@@ -90,7 +88,9 @@ export class AppLoggerMiddleware implements NestMiddleware {
       response.send = send
       let sendError: unknown
       try {
-        return response.send(exitData)
+        const result = response.send(exitData)
+        response.locals.middlewareUsed = undefined
+        return result
       } catch (error) {
         sendError = error
         throw error
