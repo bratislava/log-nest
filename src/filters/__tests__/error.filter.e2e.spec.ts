@@ -5,7 +5,9 @@ import {
   HttpStatus,
   type INestApplication,
   NotFoundException,
+  Res,
 } from '@nestjs/common'
+import type { Response } from 'express'
 import request from 'supertest'
 import { beforeAll, describe, expect, it } from 'vitest'
 
@@ -18,6 +20,10 @@ import { ErrorFactoryService } from '../../errors/error-factory.service'
 // open throughout, so nothing here is ever filtered/redacted, and any
 // assertion about a field appearing (or not) in the log is purely about
 // error.filter.ts / AppLoggerMiddleware's own error-handling logic.
+
+class DbError extends Error {
+  override name = 'DbError'
+}
 
 @Controller()
 class ErrorDemoController {
@@ -63,6 +69,19 @@ class ErrorDemoController {
       message: 'Downstream failed',
       error: new Error('underlying cause'),
     })
+  }
+
+  // the first chunk sends the headers, so the filter can no longer respond
+  @Get('stream-then-db-error')
+  streamThenDbError(@Res({ passthrough: false }) res: Response): never {
+    res.write('partial')
+    throw new DbError('connection lost')
+  }
+
+  @Get('send-then-db-error')
+  sendThenDbError(@Res({ passthrough: false }) res: Response): never {
+    res.send('done')
+    throw new DbError('connection lost')
   }
 
   @Get('alert-worthy')
@@ -236,5 +255,50 @@ describe('error.filter e2e', () => {
         /^NotFoundException: Cannot GET \/does-not-exist\n/,
       ),
     })
+  })
+
+  it('logs an error thrown after the response started, and aborts the response', async () => {
+    await expect(
+      request(app.getHttpServer())
+        .get('/stream-then-db-error')
+        .timeout({ response: 1000 }),
+    ).rejects.toMatchObject({ code: 'ECONNRESET' })
+
+    expect(loggedFields()).toEqual([
+      {
+        process: '[Nest]',
+        processPID: expect.stringMatching(/^\d+$/),
+        datetime: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+        severity: 'ERROR',
+        context: 'ErrorFilter',
+        errorType: 'DbError',
+        message: 'connection lost',
+        stack: expect.stringMatching(/^DbError: connection lost\n/),
+      },
+    ])
+  })
+
+  it('logs an error thrown after the response was sent once, leaving the response as sent', async () => {
+    await request(app.getHttpServer())
+      .get('/send-then-db-error')
+      .expect(200, 'done')
+
+    expect(loggedFields()).toEqual([
+      expect.objectContaining({
+        severity: 'LOG',
+        originalUrl: '/send-then-db-error',
+        statusCode: '200',
+      }),
+      {
+        process: '[Nest]',
+        processPID: expect.stringMatching(/^\d+$/),
+        datetime: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+        severity: 'ERROR',
+        context: 'ErrorFilter',
+        errorType: 'DbError',
+        message: 'connection lost',
+        stack: expect.stringMatching(/^DbError: connection lost\n/),
+      },
+    ])
   })
 })

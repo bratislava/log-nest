@@ -18,6 +18,10 @@ import { loggedFields, loggedLineFor } from '../../__tests__/logs'
 // status code. None of this is about sanitization (allowShape: true
 // throughout) or exception handling (nothing here throws).
 
+class DbError extends Error {
+  override name = 'DbError'
+}
+
 @Controller()
 class LoggingDemoController {
   @Get('ok')
@@ -53,6 +57,14 @@ class LoggingDemoController {
   sendThrows(@Res({ passthrough: false }) res: Response): void {
     res.statusCode = 1000
     res.send('x')
+  }
+
+  // Node only validates statusMessage in writeHead, so the filter's own send
+  // throws, with this error already handed to the middleware
+  @Get('db-error-then-send-fails')
+  dbErrorThenSendFails(@Res({ passthrough: false }) res: Response): never {
+    res.statusMessage = 'bad\nmessage'
+    throw new DbError('connection lost')
   }
 }
 
@@ -196,6 +208,23 @@ describe('AppLoggerMiddleware e2e', () => {
       alert: '1',
     })
     // ErrorFilter handles the rethrown error too, but mustn't log it again
+    expect(loggedFields()).toHaveLength(1)
+  })
+
+  it("keeps the handler's error when the filter's own send then fails, logging the send failure beside it", async () => {
+    await request(app.getHttpServer()).get('/db-error-then-send-fails')
+
+    const line = loggedLineFor('/db-error-then-send-fails')
+    expect(line).toMatchObject({
+      errorType: 'DbError',
+      stack: expect.stringMatching(/^DbError: connection lost\n/),
+      sendErrorType: 'TypeError',
+      sendErrorMessage: 'Invalid character in statusMessage',
+      sendErrorStack: expect.stringMatching(
+        /^TypeError: Invalid character in statusMessage\n/,
+      ),
+      alert: '1',
+    })
     expect(loggedFields()).toHaveLength(1)
   })
 })

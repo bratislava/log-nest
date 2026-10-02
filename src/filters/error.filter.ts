@@ -25,7 +25,7 @@ function rethrowIfNotHttp(
 /**
  * Shared response/log handling for the exception filters.
  *
- * Always sends a response.
+ * Always sends a response, or aborts one the handler already started.
  *
  * `ErrorSymbols.*` keys along with `errorType`/ `stack` are split off here and
  * handed to `res.locals`, for `AppLoggerMiddleware` to fold into the log line.
@@ -44,9 +44,15 @@ function respondOrLog(
   message?: string,
 ): void {
   const response = host.switchToHttp().getResponse<Response>()
-  response.status(statusCode)
-
   const { responseLog, responseMessage } = separateLogFromResponseObj(rawBody)
+
+  if (response.headersSent) {
+    new LineLoggerService(filterName).error(exception, responseLog)
+    response.destroy()
+    return
+  }
+
+  response.status(statusCode)
 
   if (response.locals.middlewareUsed) {
     // `response.locals.sanitizeMetadata` was already written by
