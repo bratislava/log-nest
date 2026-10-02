@@ -65,7 +65,7 @@
     "@types/node": "24.12.2",
     "@types/supertest": "6.0.3",
     "@vitest/eslint-plugin": "1.6.27",
-    "axios": "1.18.1",
+    "axios": "1.20.0",
     "express": "5.2.1",
     "prettier": "3.9.6",
     "publint": "0.3.24",
