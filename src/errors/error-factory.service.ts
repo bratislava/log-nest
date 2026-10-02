@@ -22,10 +22,11 @@ import { FromAxiosErrorOptions } from './status-override'
  * so the direct index would be a compile error until something adds the
  * property.
  */
-export type DefaultErrorEnum =
-  LogNestErrorEnumRegistry extends { errorEnum: infer TRegistered }
-    ? TRegistered
-    : string
+export type DefaultErrorEnum = LogNestErrorEnumRegistry extends {
+  errorEnum: infer TRegistered
+}
+  ? TRegistered
+  : string
 
 /**
  * Arguments for the per-status factory methods of {@link ErrorFactoryService}.
@@ -256,38 +257,37 @@ export class ErrorFactoryService<TErrorEnum extends string = DefaultErrorEnum> {
       error: errorCause,
     }: LoggingExceptionOptions<TErrorEnum>,
   ): HttpException {
-    const response: ResponseErrorInternalDto<TErrorEnum> =
-      errorCause instanceof Error
-        ? {
-            statusCode,
-            status,
-            errorName: errorEnum,
-            [ErrorSymbols.alert]: 0,
-            message,
-            [ErrorSymbols.errorCause]: errorCause.name,
-            [ErrorSymbols.causedByMessage]: errorCause.message,
-            [ErrorSymbols.causedByConsole]:
-              errorCause instanceof HttpException
-                ? (errorCause.getResponse() as ResponseErrorInternalDto)[
-                    ErrorSymbols.console
-                  ]
-                : undefined,
-            [ErrorSymbols.console]: console,
-          }
-        : {
-            statusCode,
-            status,
-            errorName: errorEnum,
-            [ErrorSymbols.alert]: 0,
-            message,
-            [ErrorSymbols.errorCause]: errorCause
-              ? typeof errorCause
-              : undefined,
-            [ErrorSymbols.causedByMessage]: errorCause
-              ? JSON.stringify(errorCause)
-              : undefined,
-            [ErrorSymbols.console]: console,
-          }
+    const response: ResponseErrorInternalDto<TErrorEnum> = {
+      statusCode,
+      status,
+      errorName: errorEnum,
+      [ErrorSymbols.alert]: 0,
+      message,
+    }
+
+    if (errorCause instanceof Error) {
+      response[ErrorSymbols.errorCause] = errorCause.name
+      response[ErrorSymbols.causedByMessage] = errorCause.message
+      const causedByConsole =
+        errorCause instanceof HttpException
+          ? (errorCause.getResponse() as ResponseErrorInternalDto)[
+              ErrorSymbols.console
+            ]
+          : undefined
+      if (causedByConsole !== undefined) {
+        response[ErrorSymbols.causedByConsole] = causedByConsole
+      }
+    } else if (errorCause) {
+      response[ErrorSymbols.errorCause] = typeof errorCause
+      // JSON.stringify returns undefined for e.g. functions and symbols
+      const causedByMessage = JSON.stringify(errorCause) as string | undefined
+      if (causedByMessage !== undefined) {
+        response[ErrorSymbols.causedByMessage] = causedByMessage
+      }
+    }
+    if (console !== undefined) {
+      response[ErrorSymbols.console] = console
+    }
 
     if (this.alertReporting.includes(errorEnum)) {
       response[ErrorSymbols.alert] = 1

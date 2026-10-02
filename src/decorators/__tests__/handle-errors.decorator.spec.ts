@@ -1,19 +1,30 @@
-import { ErrorEnum } from '../../errors/base-errors.enum'
-import { ErrorFactoryService } from '../../errors/error-factory.service'
+import { describe, expect, it } from 'vitest'
+
+import { loggedFields, loggedLines } from '../../__tests__/logs'
+import { isLogfmt } from '../../logging/logfmt'
 import { HandleErrors } from '../handle-errors.decorator'
 
+/** The one line the test logged, parsed. */
+function loggedLine(): Record<string, string> {
+  const fields = loggedFields()
+  expect(fields).toHaveLength(1)
+  return fields[0]
+}
+
 describe('HandleErrors', () => {
-  let consoleErrorMock: jest.SpyInstance
+  it('passes the return value through and logs nothing when the method succeeds', async () => {
+    class TestClass {
+      @HandleErrors('Test error handler')
+      async testMethod(): Promise<string> {
+        return Promise.resolve('result')
+      }
+    }
 
-  beforeEach(() => {
-    consoleErrorMock = jest.spyOn(console, 'log').mockImplementation(jest.fn())
+    await expect(new TestClass().testMethod()).resolves.toBe('result')
+    expect(loggedFields()).toEqual([])
   })
 
-  afterEach(() => {
-    consoleErrorMock.mockRestore()
-  })
-
-  it('should catch and handle errors', async () => {
+  it('swallows a thrown Error, resolving to null, and logs it with the method name', async () => {
     class TestClass {
       @HandleErrors('Test error handler')
       async testMethod(): Promise<void> {
@@ -21,46 +32,116 @@ describe('HandleErrors', () => {
       }
     }
 
-    const t = new TestClass()
+    await expect(new TestClass().testMethod()).resolves.toBeNull()
 
-    // We expect testMethod to throw an error which should be caught and handled by the decorator
-    await expect(t.testMethod()).resolves.toBeNull()
-
-    const regex =
-      /process="\[Nest]" processPID="\d+" datetime="\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z" severity="ERROR" context="Test error handler" errorType="Error" message="This is a test error" method="undefined" stack="Error: This is a test error.*"/
-
-    expect(consoleErrorMock).toHaveBeenCalledTimes(1)
-    expect(consoleErrorMock).toHaveBeenCalledWith(expect.stringMatching(regex))
+    expect(loggedLine()).toEqual({
+      process: '[Nest]',
+      processPID: expect.stringMatching(/^\d+$/),
+      datetime: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+      severity: 'ERROR',
+      context: 'Test error handler',
+      errorType: 'Error',
+      message: 'This is a test error',
+      methodName: 'testMethod',
+      stack: expect.stringMatching(/^Error: This is a test error\n/),
+    })
+    expect(isLogfmt(loggedLines()[0])).toBe(true)
   })
 
-  it('should catch and handle HttpExceptions', async () => {
+  it('also catches a synchronous throw from a method that is not async', async () => {
     class TestClass {
-      private errorFactoryService = new ErrorFactoryService({
-        alertReporting: [ErrorEnum.INTERNAL_SERVER_ERROR],
-      })
-
       @HandleErrors('Test error handler')
-      async testMethod(): Promise<void> {
-        return Promise.reject(
-          this.errorFactoryService.BadRequestException({
-            errorEnum: ErrorEnum.INTERNAL_SERVER_ERROR,
-            message: 'Error message',
-            console: 'Console error',
-            error: new Error('Caused by error message test'),
-          }),
-        )
+      // eslint-disable-next-line @typescript-eslint/promise-function-async -- deliberately sync: @HandleErrors makes this return a Promise at runtime, TS just can't see that
+      testMethod(): Promise<string> {
+        throw new Error('sync boom, no promise wrapper')
       }
     }
 
-    const t = new TestClass()
+    await expect(new TestClass().testMethod()).resolves.toBeNull()
 
-    // We expect testMethod to throw an error which should be caught and handled by the decorator
-    await expect(t.testMethod()).resolves.toBeNull()
+    expect(loggedLine()).toEqual({
+      process: '[Nest]',
+      processPID: expect.stringMatching(/^\d+$/),
+      datetime: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+      severity: 'ERROR',
+      context: 'Test error handler',
+      errorType: 'Error',
+      message: 'sync boom, no promise wrapper',
+      methodName: 'testMethod',
+      stack: expect.stringMatching(/^Error: sync boom, no promise wrapper\n/),
+    })
+  })
 
-    const regex =
-      /process="\[Nest]" processPID="\d+" datetime="\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z" severity="ERROR" context="Test error handler" errorType="HttpException" statusCode="400" status="Bad Request" errorName="INTERNAL_SERVER_ERROR" message="Error message" alert="1" errorCause="Error" causedByMessage="Caused by error message test" causedByConsole="undefined" console="Console error" method="undefined" stack="HttpException:.*Was directly caused by:.*/
+  it('logs a thrown primitive as its content, with the method name', async () => {
+    class TestClass {
+      @HandleErrors('Test error handler')
+      async testMethod(): Promise<void> {
+        // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- deliberately not an Error
+        return Promise.reject('a plain string value')
+      }
+    }
 
-    expect(consoleErrorMock).toHaveBeenCalledTimes(1)
-    expect(consoleErrorMock).toHaveBeenCalledWith(expect.stringMatching(regex))
+    await expect(new TestClass().testMethod()).resolves.toBeNull()
+
+    expect(loggedLine()).toEqual({
+      process: '[Nest]',
+      processPID: expect.stringMatching(/^\d+$/),
+      datetime: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+      severity: 'ERROR',
+      context: 'Test error handler',
+      message: 'a plain string value',
+      methodName: 'testMethod',
+    })
+  })
+
+  it('tags a thrown plain object with the method name too', async () => {
+    class TestClass {
+      @HandleErrors('Test error handler')
+      async testMethod(): Promise<void> {
+        // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- deliberately not an Error
+        return Promise.reject({ reason: 'not an Error' })
+      }
+    }
+
+    await expect(new TestClass().testMethod()).resolves.toBeNull()
+
+    expect(loggedLine()).toEqual({
+      process: '[Nest]',
+      processPID: expect.stringMatching(/^\d+$/),
+      datetime: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+      severity: 'ERROR',
+      context: 'Test error handler',
+      reason: 'not an Error',
+      methodName: 'testMethod',
+    })
+  })
+
+  it('logs a frozen error with the method name', async () => {
+    class TestClass {
+      @HandleErrors('Test error handler')
+      async testMethod(): Promise<void> {
+        return Promise.reject(Object.freeze(new Error('frozen')))
+      }
+    }
+
+    await expect(new TestClass().testMethod()).resolves.toBeNull()
+
+    expect(loggedLine()).toEqual({
+      process: '[Nest]',
+      processPID: expect.stringMatching(/^\d+$/),
+      datetime: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+      severity: 'ERROR',
+      context: 'Test error handler',
+      errorType: 'Error',
+      message: 'frozen',
+      methodName: 'testMethod',
+      stack: expect.stringMatching(/^Error: frozen\n/),
+    })
+  })
+
+  it('throws a TypeError when applied to something that is not a method', () => {
+    expect(() => HandleErrors()({}, 'notAMethod', { value: 42 })).toThrow(
+      new TypeError('@HandleErrors can only be applied to methods, got number'),
+    )
   })
 })

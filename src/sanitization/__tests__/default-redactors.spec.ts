@@ -1,3 +1,5 @@
+import { describe, expect, it } from 'vitest'
+
 import { birthNumberRedactor, emailRedactor } from '../default-redactors'
 
 describe('emailRedactor', () => {

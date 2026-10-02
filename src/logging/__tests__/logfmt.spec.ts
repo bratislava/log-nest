@@ -1,5 +1,7 @@
 import { HttpException } from '@nestjs/common'
+import { describe, expect, it } from 'vitest'
 
+import { fieldsOf } from '../../__tests__/logs'
 import { ErrorEnum } from '../../errors/base-errors.enum'
 import { ErrorFactoryService } from '../../errors/error-factory.service'
 import {
@@ -11,9 +13,9 @@ import {
   toLogfmt,
 } from '../logfmt'
 
-describe('Testing logging:', () => {
+describe('logfmt', () => {
   describe('objToLogfmt function', () => {
-    it('should return the correct log format', () => {
+    it('formats each field as key="value", space-separated', () => {
       const obj = {
         name: 'John',
         age: 30,
@@ -25,14 +27,14 @@ describe('Testing logging:', () => {
       expect(logfmt).toBe('name="John" age="30" city="New York"')
     })
 
-    it('should handle empty objects', () => {
+    it('returns an empty string for an empty object', () => {
       const obj = {}
       const logfmt = objToLogfmt(obj)
 
       expect(logfmt).toBe('')
     })
 
-    it('should handle single quote in string', () => {
+    it('leaves single quotes unescaped', () => {
       const obj = {
         name: "O'Brien",
       }
@@ -41,7 +43,7 @@ describe('Testing logging:', () => {
       expect(logfmt).toBe('name="O\'Brien"')
     })
 
-    it('should handle new line in string', () => {
+    it('escapes a newline as a literal \\n', () => {
       const obj = {
         address: '123 Main St.\nNew York, NY',
       }
@@ -50,7 +52,7 @@ describe('Testing logging:', () => {
       expect(logfmt).toBe(String.raw`address="123 Main St.\nNew York, NY"`)
     })
 
-    it('should handle complex object', () => {
+    it('serializes nested objects as escaped JSON', () => {
       const obj = {
         key1: { subKey1: 'a', subKey2: 'b' },
         key2: { subKey2: 'c', subKey3: { subSubKey1: 'd' } },
@@ -62,7 +64,7 @@ describe('Testing logging:', () => {
       )
     })
 
-    it('should handle escaping strings', () => {
+    it('escapes backslashes and double quotes', () => {
       const obj = {
         key: String.raw`a
    \ \\ \\\ \\\\ " "" """ \" "\"`,
@@ -92,7 +94,7 @@ describe('Testing logging:', () => {
   })
 
   describe('separateLogFromResponseObj function', () => {
-    it('should separate log data and response data correctly', () => {
+    it('splits symbol-keyed fields, by description, from string-keyed ones', () => {
       const obj = {
         [Symbol('log')]: 'log data',
         res: 'response data',
@@ -128,17 +130,26 @@ describe('Testing logging:', () => {
   })
 
   describe('errorToLogfmt function', () => {
-    it('should stringify HttpException', () => {
-      const error = new HttpException('Test error message', 500)
-      const logfmt = errorToLogfmt(error, 'testMethod')
+    it('leaves methodName out when none is passed', () => {
+      expect(fieldsOf(errorToLogfmt(new Error('boom')))).not.toHaveProperty(
+        'methodName',
+      )
       expect(
-        logfmt.startsWith(
-          String.raw`errorType="HttpException" message="Test error message" method="testMethod" stack="HttpException: Test error message\n`,
-        ),
-      ).toBe(true)
+        fieldsOf(errorToLogfmt(new HttpException('boom', 500))),
+      ).not.toHaveProperty('methodName')
     })
 
-    it('should stringify HttpException from ErrorFactoryService', () => {
+    it('formats an HttpException as errorType, message, methodName and stack', () => {
+      const error = new HttpException('Test error message', 500)
+      expect(fieldsOf(errorToLogfmt(error, 'testMethod'))).toEqual({
+        errorType: 'HttpException',
+        message: 'Test error message',
+        methodName: 'testMethod',
+        stack: expect.stringMatching(/^HttpException: Test error message\n/),
+      })
+    })
+
+    it('formats an ErrorFactoryService exception with its response and log fields', () => {
       const errorFactoryService = new ErrorFactoryService({
         alertReporting: [ErrorEnum.INTERNAL_SERVER_ERROR],
       })
@@ -148,45 +159,56 @@ describe('Testing logging:', () => {
         console: 'console input',
         error: new Error('Test error message'),
       })
-      const logfmt = errorToLogfmt(error, 'testMethod')
-
-      const expected = String.raw`errorType="HttpException" statusCode="500" status="Internal server error" errorName="INTERNAL_SERVER_ERROR" message="Test message" alert="1" errorCause="Error" causedByMessage="Test error message" causedByConsole="undefined" console="console input" method="testMethod" stack="HttpException: Test message`
-
-      expect(logfmt).toContain(expected)
+      expect(fieldsOf(errorToLogfmt(error, 'testMethod'))).toEqual({
+        errorType: 'HttpException',
+        statusCode: '500',
+        status: 'Internal server error',
+        errorName: 'INTERNAL_SERVER_ERROR',
+        message: 'Test message',
+        alert: '1',
+        errorCause: 'Error',
+        causedByMessage: 'Test error message',
+        console: 'console input',
+        methodName: 'testMethod',
+        stack: expect.stringMatching(
+          /^HttpException: Test message\n.*Was directly caused by:/s,
+        ),
+      })
     })
   })
 
   describe('toLogfmt function', () => {
-    it('should convert random string to logfmt', () => {
+    it('wraps a non-logfmt string as an escaped message field', () => {
       const randomString = 'This is a \n " random string!'
       const result = toLogfmt(randomString)
       expect(result).toBe(String.raw`message="This is a \n \" random string!"`)
     })
 
-    it('should convert logfmt string to logfmt', () => {
+    it('passes an already-logfmt string through unchanged', () => {
       const logfmtString = 'key="value"'
       const result = toLogfmt(logfmtString)
       expect(result).toBe('key="value"')
     })
 
-    it('should convert object to logfmt', () => {
+    it('formats an object as key="value" pairs', () => {
       const testObject = { key1: 'value1', key2: 'value2' }
       const result = toLogfmt(testObject)
       expect(result).toBe(`key1="${testObject.key1}" key2="${testObject.key2}"`)
     })
 
-    it('should convert empty string with to logfmt', () => {
+    it('returns an empty string for an empty string', () => {
       const emptyString = ''
       const result = toLogfmt(emptyString)
       expect(result).toBe('')
     })
 
-    it('should convert error to logfmt', () => {
+    it('formats an Error as errorType, message and stack', () => {
       const error = new Error('Error message')
-      const result = toLogfmt(error)
-      expect(result).toContain(`errorType="${error.name}"`)
-      expect(result).toContain(`message="${escapeForLogfmt(error.message)}"`)
-      expect(result).toContain(`stack="Error: Error message\\n`)
+      expect(fieldsOf(toLogfmt(error))).toEqual({
+        errorType: 'Error',
+        message: 'Error message',
+        stack: expect.stringMatching(/^Error: Error message\n/),
+      })
     })
 
     it.each<[unknown, string]>([

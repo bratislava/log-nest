@@ -4,14 +4,14 @@ import { Injectable } from '@nestjs/common'
 
 import { ErrorEnum, ErrorResponseEnum } from '../errors/base-errors.enum'
 import { ErrorFactoryService } from '../errors/error-factory.service'
-import { LineLoggerSubservice } from '../logging/line-logger.subservice'
+import { LineLoggerService } from '../logging/line-logger.service'
 import { LogRedactor } from './types/redaction.types'
 
 type RedactedValue<T> = unknown extends T
   ? unknown
   : T extends object
     ? T
-    : string
+    : T | string
 
 @Injectable()
 // eslint-disable-next-line @darraghor/nestjs-typed/injectable-should-be-provided
@@ -21,7 +21,7 @@ export class LogRedactionService {
   /** Names merged into every `redact()` call. See {@link registerGlobal}. */
   private readonly globalNames: string[] = []
 
-  private readonly logger = new LineLoggerSubservice(LogRedactionService.name)
+  private readonly logger = new LineLoggerService(LogRedactionService.name)
 
   constructor(private readonly errorFactoryService: ErrorFactoryService) {}
 
@@ -59,10 +59,12 @@ export class LogRedactionService {
    * are left as-is), so the returned value keeps `value`'s shape and type.
    * Anything else (number, boolean, bigint, null, ...) has no shape to
    * preserve: it is best-effort JSON-stringified and redacted as a string
-   * instead. `RedactedValue<T>` encodes exactly that split (object in gives
-   * `T` back, everything else gives back a `string`), so the type is
-   * enforced by the compiler rather than asserted by a cast at the call
-   * site.
+   * instead, coming back as that string only if a redactor changed it, and
+   * unchanged otherwise. What JSON.stringify can't represent (bigint, symbol,
+   * undefined, ...) comes back unchanged. `RedactedValue<T>` encodes that
+   * split (object in gives `T` back, anything else gives back `T` or a
+   * `string`), so the type is enforced by the compiler rather than asserted
+   * by a cast at the call site.
    *
    * Delegates to {@link applyRedactors} so the global-names merge happens
    * once here, not on every recursive step.
@@ -117,8 +119,10 @@ export class LogRedactionService {
     } catch {
       return value
     }
-    return (stringified as string | undefined) === undefined
-      ? value
-      : this.applyRedactors(names, stringified)
+    if ((stringified as string | undefined) === undefined) {
+      return value
+    }
+    const redacted = this.applyRedactors(names, stringified)
+    return redacted === stringified ? value : redacted
   }
 }

@@ -1,7 +1,7 @@
 import { Injectable, NestMiddleware } from '@nestjs/common'
 import { NextFunction, Request, Response } from 'express'
 
-import { LineLoggerSubservice } from '../logging/line-logger.subservice'
+import { LineLoggerService } from '../logging/line-logger.service'
 import { LogAllowListService } from '../sanitization/allow-list.service'
 import { LogRedactionService } from '../sanitization/log-redaction.service'
 import { LogAllowShape } from '../sanitization/types/allow-list.types'
@@ -55,8 +55,6 @@ export class AppLoggerMiddleware implements NestMiddleware {
   ): void {
     const { send } = response
     response.send = (exitData?: ExitData) => {
-      response.locals.middlewareUsed = undefined
-
       // `SanitizeLogMetadataInterceptor` wrote this before the handler ran, if
       // `@LogAllowList`/`@LogRedact` applied to it - independent of `exitData`,
       // which by now might be the stringified body, not the original value.
@@ -87,16 +85,55 @@ export class AppLoggerMiddleware implements NestMiddleware {
         Record<string, unknown> | undefined
       response.locals.errorLogData = undefined
 
-      this.logExit(
-        response,
-        context,
-        this.sanitizeToJson(redactorNames, allowShape, body),
-        responseLogData,
-        errorLogData,
-      )
-
       response.send = send
-      return response.send(exitData)
+      let exitLogData = errorLogData
+      try {
+        const result = response.send(exitData)
+        response.locals.middlewareUsed = undefined
+        return result
+      } catch (error) {
+        if (errorLogData === undefined) {
+          exitLogData =
+            error instanceof Error
+              ? {
+                  errorType: error.name,
+                  message: error.message,
+                  stack: error.stack,
+                  alert: 1,
+                }
+              : { errorType: `UnexpectedErrorType: ${typeof error}`, alert: 1 }
+        } else {
+          exitLogData =
+            error instanceof Error
+              ? {
+                  ...errorLogData,
+                  sendErrorType: error.name,
+                  sendErrorMessage: error.message,
+                  sendErrorStack: error.stack,
+                  alert: 1,
+                }
+              : {
+                  ...errorLogData,
+                  sendErrorType: `UnexpectedErrorType: ${typeof error}`,
+                  alert: 1,
+                }
+        }
+        throw error
+      } finally {
+        try {
+          this.logExit(
+            response,
+            context,
+            this.sanitizeToJson(redactorNames, allowShape, body),
+            responseLogData,
+            exitLogData,
+          )
+        } catch (logError) {
+          new LineLoggerService(AppLoggerMiddleware.name).error(logError, {
+            alert: 1,
+          })
+        }
+      }
     }
   }
 
@@ -188,7 +225,8 @@ export class AppLoggerMiddleware implements NestMiddleware {
     redactorNames: readonly string[],
     allowShape: LogAllowShape | undefined,
     value: unknown,
-  ): string {
+  ): string | undefined {
+    // undefined when there's nothing to log (e.g. a request with no body)
     return JSON.stringify(this.sanitize(redactorNames, allowShape, value))
   }
 
@@ -211,15 +249,17 @@ export class AppLoggerMiddleware implements NestMiddleware {
   private logExit(
     response: Response,
     context: RequestLogContext,
-    requestBodyLog: string,
+    requestBodyLog: string | undefined,
     responseDataLog: string,
     extra?: Record<string, unknown>,
   ): void {
-    const logger = new LineLoggerSubservice(response.statusMessage)
+    const logger = new LineLoggerService(response.statusMessage)
     const logObj: Record<string, string | number> = {
       ...this.buildBaseLogObj(context),
       statusCode: response.statusCode,
-      'request-body': requestBodyLog,
+      ...(requestBodyLog === undefined
+        ? {}
+        : { 'request-body': requestBodyLog }),
       'response-data': responseDataLog,
       ...extra,
     }
@@ -227,7 +267,7 @@ export class AppLoggerMiddleware implements NestMiddleware {
   }
 
   private emitAtSeverity(
-    logger: LineLoggerSubservice,
+    logger: LineLoggerService,
     statusCode: number,
     logObj: Record<string, string | number>,
   ): void {

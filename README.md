@@ -20,13 +20,13 @@ labels.
 
 Everything else follows from that:
 
-- `LineLoggerSubservice` formats every log call, including stack traces, as a single logfmt line.
+- `LineLoggerService` formats every log call, including stack traces, as a single logfmt line.
 - `ErrorFactoryService` builds exceptions that carry structured metadata: a machine-readable `errorName` for querying,
   an `alert` flag for Grafana alerting, and log-only context the client must never see.
 - The exception filters and `AppLoggerMiddleware` cooperate to split each error into its two audiences: the sanitized
   JSON response goes to the client, while the full picture (cause chain, `console` context, stack) goes to the log.
 - Code running outside the request-handling chain (cron jobs, startup tasks, event handlers) is covered too: the
-  `@HandleErrors` decorator logs errors the exception filters would never see, and registering `LineLoggerSubservice`
+  `@HandleErrors` decorator logs errors the exception filters would never see, and registering `LineLoggerService`
   as the NestJS logger keeps the framework's own output logfmt as well.
 
 ## Installation
@@ -89,12 +89,12 @@ import {NestFactory} from '@nestjs/core'
 import {
   ErrorFilter,
   HttpExceptionFilter,
-  LineLoggerSubservice,
+  LineLoggerService,
   UnknownExceptionFilter,
 } from '@bratislava/log-nest'
 
 const app = await NestFactory.create(AppModule, {
-  logger: new LineLoggerSubservice(),
+  logger: new LineLoggerService(),
 })
 // Order matters: later filters take precedence, and HttpException extends
 // Error. Swap ErrorFilter/HttpExceptionFilter and ErrorFilter would swallow
@@ -213,7 +213,7 @@ try {
 }
 ```
 
-### Logging: `LineLoggerSubservice`
+### Logging: `LineLoggerService`
 
 A standard NestJS `LoggerService`. Besides `app.useLogger`, use it directly with a context label:
 
@@ -221,7 +221,7 @@ A standard NestJS `LoggerService`. Besides `app.useLogger`, use it directly with
 
 @Injectable()
 export class FormsService {
-  private readonly logger = new LineLoggerSubservice(FormsService.name)
+  private readonly logger = new LineLoggerService(FormsService.name)
 
   create(form: Form): void {
     this.logger.log('Form created', {formId: form.id, slug: form.slug})
@@ -235,14 +235,14 @@ Strings already in logfmt shape pass through untouched; everything else is seria
 also exported for direct use:
 `toLogfmt(value)`, `errorToLogfmt(error)`, and `escapeForLogfmt(string)`.
 
-**Auto-named via DI.** Instead of passing `ClassName.name` yourself, inject `LineLoggerSubservice` as a constructor
+**Auto-named via DI.** Instead of passing `ClassName.name` yourself, inject `LineLoggerService` as a constructor
 dependency of any `@Injectable()` class, and it derives its context from that class automatically:
 
 ```ts
 
 @Injectable()
 export class FormsService {
-  constructor(private readonly logger: LineLoggerSubservice) {
+  constructor(private readonly logger: LineLoggerService) {
   }
 
   create(form: Form): void {
@@ -252,12 +252,12 @@ export class FormsService {
 ```
 
 This only works when Nest constructs the class through its own DI container. A class built manually via a custom
-`useFactory` provider won't get a meaningful context this way, so keep using `new LineLoggerSubservice(ClassName.name)`
+`useFactory` provider won't get a meaningful context this way, so keep using `new LineLoggerService(ClassName.name)`
 there.
 
 Two details are worth knowing:
 
-- The second constructor parameter disables ANSI colors: `new LineLoggerSubservice(context, false)`. By default, every
+- The second constructor parameter disables ANSI colors: `new LineLoggerService(context, false)`. By default, every
   line is wrapped in color escape codes.
 - When serializing an object, the `console` field is flattened: its subfields become top-level logfmt pairs on the line,
   so name them as you want to query them in Loki.
@@ -307,7 +307,7 @@ verification**, purely for log correlation. Never treat it as authenticated.
 >   without separate access to the user database), but only if `sub` is genuinely an opaque ID, not something
 >   directly identifying like an email.
 > - **Manual logging is entirely out of scope.** `console`/`error` passed to `ErrorFactoryService`, and any direct
->   `LineLoggerSubservice`/`logger.log(...)` call anywhere in your app, are programmer-supplied content this package
+>   `LineLoggerService`/`logger.log(...)` call anywhere in your app, are programmer-supplied content this package
 >   never inspects. Don't log PII there directly.
 >
 > This package gives you a deliberate, targeted way to log more of `request-body`/`response-data` while staying
@@ -395,7 +395,7 @@ Like `@LogAllowList`, it's additive across the global/endpoint levels, and runs 
 `@HandleErrors(loggerName?)` logs and swallows anything thrown by the method (resolves to `null`). Use it on entry
 points that run *outside* the request-handling chain (cron jobs, event handlers, ...). There the exception filters never
 see a thrown error, so it would surface as Nest's default multi-line stack trace instead of a logfmt line. The decorator
-catches it and logs it through `LineLoggerSubservice`:
+catches it and logs it through `LineLoggerService`:
 
 ```ts
 
@@ -433,7 +433,7 @@ export class FormRepository implements HasErrorFactoryService {
 |----------------------------------------------------------------|-------------------|-----------------------------------------------------------------------------------------------------|
 | `NestLoggingModule`                                            | module            | `forRoot({ alertReporting })`; provides + globally exports the error factory service                |
 | `ErrorFactoryService<T>`, `LogNestErrorEnumRegistry`           | injectable / type | exception factory, generic over the enum union; registry for the no-generic default                 |
-| `LineLoggerSubservice`                                         | class             | logfmt `LoggerService`                                                                              |
+| `LineLoggerService`                                         | class             | logfmt `LoggerService`                                                                              |
 | `ErrorFilter`, `HttpExceptionFilter`, `UnknownExceptionFilter` | filters           | global exception handling                                                                           |
 | `AppLoggerMiddleware`                                          | middleware        | request/response logging + log/response split                                                       |
 | `LogSanitizationModule`                                        | module            | `forRoot({ redactors, allowShape, onDisallowed })`; provides + globally exports both services below |
@@ -454,7 +454,7 @@ npm ci             # install dependencies
 npm run build      # compile to dist/ (tsconfig.build.json)
 npm run typecheck  # tsc --noEmit
 npm run lint       # eslint (lint:fix to autofix, format for prettier)
-npm test           # jest (test:watch for watch mode)
+npm test           # vitest (test:watch for watch mode)
 ```
 
 ## License

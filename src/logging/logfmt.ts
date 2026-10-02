@@ -98,7 +98,7 @@ function httpExceptionToObj(
       errorType: error.name,
       ...responseMessage,
       ...responseLog,
-      method: methodName,
+      ...(methodName === undefined ? {} : { methodName }),
       stack: error.stack,
     }
   } catch (parseError) {
@@ -109,7 +109,7 @@ function httpExceptionToObj(
     return {
       errorType: error.name,
       message: error.message,
-      method: methodName,
+      ...(methodName === undefined ? {} : { methodName }),
       stack: error.stack,
     }
   }
@@ -119,7 +119,7 @@ function genericErrorToObj(error: Error, methodName?: string | symbol): object {
   return {
     errorType: error.name,
     message: error.message,
-    method: methodName,
+    ...(methodName === undefined ? {} : { methodName }),
     stack: error.stack,
   }
 }
@@ -137,7 +137,7 @@ export function errorToLogfmt(
   return objToLogfmt({
     errorType: `UnexpectedErrorType: ${typeof error}`,
     message: 'Unexpected type was thrown as error. This should not happen',
-    method: methodName,
+    ...(methodName === undefined ? {} : { methodName }),
     alert: 1,
   })
 }

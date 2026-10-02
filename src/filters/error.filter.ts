@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common'
 import { Response } from 'express'
 
-import { LineLoggerSubservice } from '../logging/line-logger.subservice'
+import { LineLoggerService } from '../logging/line-logger.service'
 import { separateLogFromResponseObj } from '../logging/logfmt'
 
 function rethrowIfNotHttp(
@@ -16,7 +16,7 @@ function rethrowIfNotHttp(
   filterName: string,
 ): void {
   if (host.getType() !== 'http') {
-    const logger = new LineLoggerSubservice(`${filterName} non HTTP`)
+    const logger = new LineLoggerService(`${filterName} non HTTP`)
     logger.error(exception)
     throw exception
   }
@@ -25,7 +25,7 @@ function rethrowIfNotHttp(
 /**
  * Shared response/log handling for the exception filters.
  *
- * Always sends a response.
+ * Always sends a response, or aborts one the handler already started.
  *
  * `ErrorSymbols.*` keys along with `errorType`/ `stack` are split off here and
  * handed to `res.locals`, for `AppLoggerMiddleware` to fold into the log line.
@@ -41,22 +41,34 @@ function respondOrLog(
   rawBody: object,
   errorType: string,
   stack: string | undefined,
+  message?: string,
 ): void {
   const response = host.switchToHttp().getResponse<Response>()
-  response.status(statusCode)
-
   const { responseLog, responseMessage } = separateLogFromResponseObj(rawBody)
+
+  if (response.headersSent) {
+    new LineLoggerService(filterName).error(exception, responseLog)
+    response.destroy()
+    return
+  }
+
+  response.status(statusCode)
 
   if (response.locals.middlewareUsed) {
     // `response.locals.sanitizeMetadata` was already written by
     // SanitizeLogMetadataInterceptor before the handler ran, and survives a
     // thrown error the same as a normal return - nothing to forward here.
-    response.locals.errorLogData = { ...responseLog, errorType, stack }
+    response.locals.errorLogData = {
+      ...responseLog,
+      errorType,
+      ...(stack === undefined ? {} : { stack }),
+      ...(message === undefined ? {} : { message }),
+    }
     response.json(responseMessage)
     return
   }
 
-  new LineLoggerSubservice(filterName).error(exception, responseLog)
+  new LineLoggerService(filterName).error(exception, responseLog)
   response.json(responseMessage)
 }
 
@@ -96,7 +108,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       HttpExceptionFilter.name,
       status,
       rawBody,
-      'HttpException',
+      exception.name,
       exception.stack,
     )
   }
@@ -138,6 +150,10 @@ export class UnknownExceptionFilter implements ExceptionFilter {
       },
       errorType,
       undefined,
+      // a thrown primitive is its own content; objects have no single message
+      typeof exception === 'object' && exception !== null
+        ? undefined
+        : String(exception),
     )
   }
 }

@@ -28,6 +28,8 @@ import { LogAllowShape } from '../sanitization/types/allow-list.types'
  * }
  * ```
  */
-export function LogAllowList(shape: LogAllowShape): MethodDecorator & ClassDecorator {
+export function LogAllowList(
+  shape: LogAllowShape,
+): MethodDecorator & ClassDecorator {
   return SetMetadata(ALLOW_LIST_METADATA_KEY, shape)
 }
