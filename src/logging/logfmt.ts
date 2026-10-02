@@ -137,7 +137,7 @@ export function errorToLogfmt(
   return objToLogfmt({
     errorType: `UnexpectedErrorType: ${typeof error}`,
     message: 'Unexpected type was thrown as error. This should not happen',
-    methodName,
+    ...(methodName === undefined ? {} : { methodName }),
     alert: 1,
   })
 }
