@@ -98,7 +98,6 @@ function httpExceptionToObj(
       errorType: error.name,
       ...responseMessage,
       ...responseLog,
-      ...separateLogFromResponseObj(error).responseLog,
       ...(methodName === undefined ? {} : { methodName }),
       stack: error.stack,
     }
@@ -110,7 +109,6 @@ function httpExceptionToObj(
     return {
       errorType: error.name,
       message: error.message,
-      ...separateLogFromResponseObj(error).responseLog,
       ...(methodName === undefined ? {} : { methodName }),
       stack: error.stack,
     }
@@ -121,7 +119,6 @@ function genericErrorToObj(error: Error, methodName?: string | symbol): object {
   return {
     errorType: error.name,
     message: error.message,
-    ...separateLogFromResponseObj(error).responseLog,
     ...(methodName === undefined ? {} : { methodName }),
     stack: error.stack,
   }

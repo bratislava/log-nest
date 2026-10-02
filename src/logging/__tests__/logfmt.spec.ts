@@ -4,7 +4,6 @@ import { describe, expect, it } from 'vitest'
 import { fieldsOf } from '../../__tests__/logs'
 import { ErrorEnum } from '../../errors/base-errors.enum'
 import { ErrorFactoryService } from '../../errors/error-factory.service'
-import { ErrorSymbols } from '../../errors/error-symbols'
 import {
   errorToLogfmt,
   escapeForLogfmt,
@@ -131,36 +130,7 @@ describe('logfmt', () => {
   })
 
   describe('errorToLogfmt function', () => {
-    it.each([
-      ['an Error', new Error('boom')],
-      ['an HttpException', new HttpException('boom', 500)],
-    ])(
-      'logs symbol-keyed fields smuggled onto %s, by description',
-      (_, error) => {
-        Object.assign(error, {
-          [ErrorSymbols.methodName]: 'run',
-          [Symbol('jobId')]: 42,
-        })
-        expect(fieldsOf(errorToLogfmt(error))).toEqual({
-          errorType: error.name,
-          message: 'boom',
-          methodName: 'run',
-          jobId: '42',
-          stack: expect.stringMatching(/^\w+: boom\n/),
-        })
-      },
-    )
-
-    it('prefers an explicitly passed methodName over a smuggled one', () => {
-      const error = Object.assign(new Error('boom'), {
-        [ErrorSymbols.methodName]: 'run',
-      })
-      expect(fieldsOf(errorToLogfmt(error, 'explicit')).methodName).toBe(
-        'explicit',
-      )
-    })
-
-    it('leaves methodName out when none is passed or smuggled', () => {
+    it('leaves methodName out when none is passed', () => {
       expect(fieldsOf(errorToLogfmt(new Error('boom')))).not.toHaveProperty(
         'methodName',
       )

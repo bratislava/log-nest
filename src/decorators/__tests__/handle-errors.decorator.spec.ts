@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
 import { loggedFields, loggedLines } from '../../__tests__/logs'
-import { ErrorSymbols } from '../../errors/error-symbols'
 import { isLogfmt } from '../../logging/logfmt'
 import { HandleErrors } from '../handle-errors.decorator'
 
@@ -73,7 +72,7 @@ describe('HandleErrors', () => {
     })
   })
 
-  it('logs a thrown primitive as its content', async () => {
+  it('logs a thrown primitive as its content, with the method name', async () => {
     class TestClass {
       @HandleErrors('Test error handler')
       async testMethod(): Promise<void> {
@@ -91,6 +90,7 @@ describe('HandleErrors', () => {
       severity: 'ERROR',
       context: 'Test error handler',
       message: 'a plain string value',
+      methodName: 'testMethod',
     })
   })
 
@@ -116,24 +116,7 @@ describe('HandleErrors', () => {
     })
   })
 
-  it('keeps a methodName the error already carries instead of overwriting it', async () => {
-    class TestClass {
-      @HandleErrors('Test error handler')
-      async testMethod(): Promise<void> {
-        return Promise.reject(
-          Object.assign(new Error('from deeper down'), {
-            [ErrorSymbols.methodName]: 'innerMethod',
-          }),
-        )
-      }
-    }
-
-    await expect(new TestClass().testMethod()).resolves.toBeNull()
-
-    expect(loggedLine().methodName).toBe('innerMethod')
-  })
-
-  it('still logs and swallows a frozen error it cannot tag', async () => {
+  it('logs a frozen error with the method name', async () => {
     class TestClass {
       @HandleErrors('Test error handler')
       async testMethod(): Promise<void> {
@@ -151,6 +134,7 @@ describe('HandleErrors', () => {
       context: 'Test error handler',
       errorType: 'Error',
       message: 'frozen',
+      methodName: 'testMethod',
       stack: expect.stringMatching(/^Error: frozen\n/),
     })
   })

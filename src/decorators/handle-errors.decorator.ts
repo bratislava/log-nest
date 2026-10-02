@@ -1,4 +1,3 @@
-import { ErrorSymbols } from '../errors/error-symbols'
 import { LineLoggerService } from '../logging/line-logger.service'
 
 /**
@@ -43,14 +42,7 @@ export function HandleErrors(
       try {
         return await method.apply(this, args)
       } catch (error) {
-        if (
-          typeof error === 'object' &&
-          error !== null &&
-          !(ErrorSymbols.methodName in error)
-        ) {
-          Reflect.set(error, ErrorSymbols.methodName, propertyKey)
-        }
-        logger.error(error)
+        logger.error(error, { methodName: propertyKey })
         return null
       }
     }
