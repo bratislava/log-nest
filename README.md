@@ -429,6 +429,34 @@ export class FormRepository implements HasErrorFactoryService {
 }
 ```
 
+### Testing: `@bratislava/log-nest/testing`
+
+`expectLogNestError` matches an exception from `ErrorFactoryService` by the fields you pass, in `toThrow`,
+`rejects.toThrow`, `toHaveBeenCalledWith` and `toEqual`. It compares like `toMatchObject`: any field can be an
+asymmetric matcher, and objects such as `console` match when they contain the expected keys. A test then doesn't have
+to repeat a message your code writes inline. Requires Vitest.
+
+```ts
+import { expectLogNestError } from '@bratislava/log-nest/testing'
+
+await expect(service.getForm(formId)).rejects.toThrow(
+  expectLogNestError({
+    errorEnum: FormsErrorsEnum.FORM_NOT_FOUND_ERROR,
+    message: expect.stringContaining(formId),
+    error: dbError,
+  }),
+)
+```
+
+| Field       | Compared with                                                          |
+|-------------|------------------------------------------------------------------------|
+| `status`    | `exception.getStatus()`                                                |
+| `errorEnum` | the response `errorName`                                               |
+| `message`   | the response `message`                                                 |
+| `console`   | the log-only `console` value                                           |
+| `error`     | the log-only cause, by name and message, the way the factory stores it; `undefined` means no cause, not including this property results in not checking for cause equality |
+| `alert`     | `1` if `errorEnum` is in the factory's `alertReporting` list, else `0` |
+
 ## Exports
 
 | Export                                                         | Kind              | Purpose                                                                                             |
@@ -444,6 +472,7 @@ export class FormRepository implements HasErrorFactoryService {
 | `LogAllowListService`, `LogAllowShape`                         | class / type      | structural key filtering for logged data                                                            |
 | `ErrorEnum`, `ErrorResponseEnum`                               | enums             | shared base error codes + messages                                                                  |
 | `toLogfmt`, `errorToLogfmt`, `escapeForLogfmt`                 | functions         | logfmt helpers                                                                                      |
+| `expectLogNestError` (from `@bratislava/log-nest/testing`)     | test matcher      | matches an `ErrorFactoryService` exception by the given fields                                      |
 | `HandleErrors`, `CatchDatabaseError`, `HasErrorFactoryService` | decorators / type | error-handling decorators                                                                           |
 | `LogRedact`, `LogAllowList`                                    | decorators        | per-route redaction / allowlist filtering, additive over the global config                          |
 
