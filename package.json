@@ -57,7 +57,7 @@
   },
   "devDependencies": {
     "@arethetypeswrong/core": "0.18.5",
-    "@bratislava/eslint-config-nest": "0.19.1",
+    "@bratislava/eslint-config-nest": "0.20.0",
     "@nestjs/common": "12.1.2",
     "@nestjs/core": "12.1.2",
     "@nestjs/platform-express": "12.1.2",
