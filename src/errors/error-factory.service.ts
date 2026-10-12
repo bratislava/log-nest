@@ -275,6 +275,7 @@ export class ErrorFactoryService<TErrorEnum extends string = DefaultErrorEnum> {
       response[ErrorSymbols.alert] = 1
     }
     const exception = new HttpException(response, statusCode)
+    exception.cause = errorCause
 
     if (errorCause && errorCause instanceof Error && errorCause.stack) {
       exception.stack = [
