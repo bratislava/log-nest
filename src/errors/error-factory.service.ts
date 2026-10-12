@@ -11,7 +11,6 @@ import { AxiosError } from 'axios'
 
 import { NEST_LOGGING_OPTIONS, type NestLoggingOptions } from '../options'
 import { ErrorEnum, ErrorResponseEnum } from './base-errors.enum'
-import { errorCauseFields } from './error-cause'
 import { LogNestErrorEnumRegistry } from './error-enum-registry'
 import { ErrorSymbols } from './error-symbols'
 import { ResponseErrorInternalDto } from './response-error.dto'
@@ -266,7 +265,26 @@ export class ErrorFactoryService<TErrorEnum extends string = DefaultErrorEnum> {
       message,
     }
 
-    Object.assign(response, errorCauseFields(errorCause))
+    if (errorCause instanceof Error) {
+      response[ErrorSymbols.errorCause] = errorCause.name
+      response[ErrorSymbols.causedByMessage] = errorCause.message
+      const causedByConsole =
+        errorCause instanceof HttpException
+          ? (errorCause.getResponse() as ResponseErrorInternalDto)[
+              ErrorSymbols.console
+            ]
+          : undefined
+      if (causedByConsole !== undefined) {
+        response[ErrorSymbols.causedByConsole] = causedByConsole
+      }
+    } else if (errorCause) {
+      response[ErrorSymbols.errorCause] = typeof errorCause
+      // JSON.stringify returns undefined for e.g. functions and symbols
+      const causedByMessage = JSON.stringify(errorCause) as string | undefined
+      if (causedByMessage !== undefined) {
+        response[ErrorSymbols.causedByMessage] = causedByMessage
+      }
+    }
     if (console !== undefined) {
       response[ErrorSymbols.console] = console
     }
