@@ -1,7 +1,13 @@
-import { HttpStatus } from '@nestjs/common'
-import { AxiosError, AxiosHeaders, InternalAxiosRequestConfig } from 'axios'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { Console } from 'node:console'
+import { Writable } from 'node:stream'
+import { inspect } from 'node:util'
 
+import { ConsoleLogger, HttpStatus } from '@nestjs/common'
+import { AxiosError, AxiosHeaders, InternalAxiosRequestConfig } from 'axios'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { loggedLines } from '../../__tests__/logs'
+import { LineLoggerService } from '../../logging/line-logger.service'
 import { ErrorEnum, ErrorResponseEnum } from '../base-errors.enum'
 import { ErrorFactoryService } from '../error-factory.service'
 import { ErrorSymbols } from '../error-symbols'
@@ -43,6 +49,75 @@ describe('ErrorFactoryService', () => {
 
       expect(result[ErrorSymbols.alert]).toBe(0)
     })
+  })
+
+  describe('cause', () => {
+    const cause = Object.assign(new Error('db down'), { code: 'P1001' })
+    const createException = () =>
+      errorFactoryService.InternalServerErrorException({
+        errorEnum: ErrorEnum.DATABASE_ERROR,
+        message: 'Some message',
+        error: cause,
+      })
+
+    it('keeps the original error under ErrorSymbols.originalErrorForTesting', () => {
+      expect(
+        Reflect.get(createException(), ErrorSymbols.originalErrorForTesting),
+      ).toBe(cause)
+    })
+
+    it('does not expose the cause to inspect, JSON or `.cause` readers', () => {
+      const exception = createException()
+
+      expect(exception.cause).toBeUndefined()
+      expect(inspect(exception)).not.toContain('P1001')
+      expect(JSON.stringify(exception)).not.toContain('P1001')
+    })
+
+    it('does not print the cause with console.log', () => {
+      let output = ''
+      const stream = new Writable({
+        write(chunk, _encoding, callback) {
+          output += String(chunk)
+          callback()
+        },
+      })
+
+      new Console(stream).log(createException())
+
+      expect(output).toContain('Some message')
+      expect(output).not.toContain('P1001')
+    })
+
+    it('does not log the cause with LineLoggerService', () => {
+      new LineLoggerService('Ctx', false).error(createException())
+
+      expect(loggedLines().join('\n')).toContain('Some message')
+      expect(loggedLines().join('\n')).not.toContain('P1001')
+    })
+
+    it.each([
+      ['plain', {}],
+      ['json', { json: true }],
+    ])(
+      "does not log the cause with Nest's %s ConsoleLogger",
+      (_mode, options) => {
+        const stderr = vi
+          .spyOn(process.stderr, 'write')
+          .mockImplementation(() => true)
+
+        new ConsoleLogger('Ctx', { colors: false, ...options }).error(
+          createException(),
+        )
+        const output = stderr.mock.calls
+          .map(([chunk]) => String(chunk))
+          .join('')
+        stderr.mockRestore()
+
+        expect(output).toContain('Some message')
+        expect(output).not.toContain('P1001')
+      },
+    )
   })
 
   describe('fromAxiosError', () => {

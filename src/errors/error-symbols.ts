@@ -3,6 +3,9 @@ const consoleSymbol: unique symbol = Symbol('console')
 const errorCauseSymbol: unique symbol = Symbol('errorCause')
 const causedByMessageSymbol: unique symbol = Symbol('causedByMessage')
 const causedByConsoleSymbol: unique symbol = Symbol('causedByConsole')
+const originalErrorForTestingSymbol: unique symbol = Symbol(
+  'originalErrorForTesting',
+)
 
 /**
  * Symbol keys for the internal log metadata attached to error responses. Keyed
@@ -14,4 +17,5 @@ export const ErrorSymbols = {
   errorCause: errorCauseSymbol,
   causedByMessage: causedByMessageSymbol,
   causedByConsole: causedByConsoleSymbol,
+  originalErrorForTesting: originalErrorForTestingSymbol,
 } as const

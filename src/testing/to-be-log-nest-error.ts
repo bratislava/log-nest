@@ -52,7 +52,7 @@ function logNestErrorFields(actual: unknown) {
     errorEnum: response.errorName,
     message: response.message,
     console: response[ErrorSymbols.console],
-    error: actual.cause,
+    error: Reflect.get(actual, ErrorSymbols.originalErrorForTesting) as unknown,
     alert: response[ErrorSymbols.alert],
   }
 }

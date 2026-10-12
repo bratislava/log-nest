@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { ErrorEnum } from '../../errors/base-errors.enum'
 import { ErrorFactoryService } from '../../errors/error-factory.service'
+import { ErrorSymbols } from '../../errors/error-symbols'
 import {
   LogNestErrorExpectation,
   logNestMatchers,
@@ -105,7 +106,11 @@ describe('toBeLogNestError', () => {
       })
 
       expect(error).toBeLogNestError({ error: innerError })
-      expect(error.cause).toBeLogNestError({ console: { formId } })
+      expect(
+        Reflect.get(error, ErrorSymbols.originalErrorForTesting),
+      ).toBeLogNestError({
+        console: { formId },
+      })
     })
 
     it('should match a cause that is not an Error', () => {

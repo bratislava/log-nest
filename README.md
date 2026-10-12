@@ -442,7 +442,7 @@ expect.extend(logNestMatchers)
 
 The matcher passes only for an `HttpException` from `ErrorFactoryService` and compares like `toMatchObject`: fields you
 leave out aren't checked, any field can be an asymmetric matcher, and objects such as `console` match when they contain
-the expected keys. Pass `{ exact: true }` to require every field to be equal instead. Requires Vitest.
+the expected keys. Pass `{ exact: true }` to require every field to be equal instead. Requires Vitest 5.
 
 ```ts
 await expect(service.getForm(formId)).rejects.toBeLogNestError({
@@ -451,8 +451,8 @@ await expect(service.getForm(formId)).rejects.toBeLogNestError({
   error: dbError,
 })
 
-// also usable as an asymmetric matcher
-expect(() => service.saveForm(form)).toThrow(
+// also usable as an asymmetric matcher, e.g. in toHaveBeenCalledWith or toThrow
+expect(logger.error).toHaveBeenCalledWith(
   expect.toBeLogNestError({ error: { code: 'P2002' } }),
 )
 
@@ -470,14 +470,14 @@ expect(error).toBeLogNestError(
 )
 ```
 
-| Field       | Compared with                                                                                                                                                                                                                                                                                         |
-|-------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `status`    | `exception.getStatus()`                                                                                                                                                                                                                                                                               |
-| `errorEnum` | the response `errorName`                                                                                                                                                                                                                                                                              |
-| `message`   | the response `message`                                                                                                                                                                                                                                                                                |
-| `console`   | the log-only `console` value                                                                                                                                                                                                                                                                          |
-| `error`     | `exception.cause`. An `Error` must be the same instance (like `toBe`). Anything else is compared like `toMatchObject` (`toEqual` with `exact: true`): `{ code: 'P2002' }` matches a cause with that `code`, and asymmetric matchers such as `expect.any(PrismaClientKnownRequestError)` work as usual |
-| `alert`     | `1` if `errorEnum` is in the factory's `alertReporting` list, else `0`                                                                                                                                                                                                                                |
+| Field       | Compared with                                                                                                                                                                                                                                                                                                                             |
+|-------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `status`    | `exception.getStatus()`                                                                                                                                                                                                                                                                                                                   |
+| `errorEnum` | the response `errorName`                                                                                                                                                                                                                                                                                                                  |
+| `message`   | the response `message`                                                                                                                                                                                                                                                                                                                    |
+| `console`   | the log-only `console` value                                                                                                                                                                                                                                                                                                              |
+| `error`     | the original cause the factory keeps on the exception. An `Error` must be the same instance (like `toBe`). Anything else is compared like `toMatchObject` (`toEqual` with `exact: true`): `{ code: 'P2002' }` matches a cause with that `code`, and asymmetric matchers such as `expect.any(PrismaClientKnownRequestError)` work as usual |
+| `alert`     | `1` if `errorEnum` is in the factory's `alertReporting` list, else `0`                                                                                                                                                                                                                                                                    |
 
 ## Exports
 
