@@ -10,7 +10,7 @@ import { loggedLines } from '../../__tests__/logs'
 import { LineLoggerService } from '../../logging/line-logger.service'
 import { ErrorEnum, ErrorResponseEnum } from '../base-errors.enum'
 import { ErrorFactoryService } from '../error-factory.service'
-import { ErrorSymbols } from '../error-symbols'
+import { ErrorSymbols, rawErrorSymbol } from '../error-symbols'
 import { ResponseErrorInternalDto } from '../response-error.dto'
 
 describe('ErrorFactoryService', () => {
@@ -60,10 +60,8 @@ describe('ErrorFactoryService', () => {
         error: cause,
       })
 
-    it('keeps the original error under ErrorSymbols.originalErrorForTesting', () => {
-      expect(
-        Reflect.get(createException(), ErrorSymbols.originalErrorForTesting),
-      ).toBe(cause)
+    it('keeps the raw error under rawErrorSymbol', () => {
+      expect(Reflect.get(createException(), rawErrorSymbol)).toBe(cause)
     })
 
     it('does not expose the cause to inspect, JSON or `.cause` readers', () => {
@@ -106,13 +104,15 @@ describe('ErrorFactoryService', () => {
           .spyOn(process.stderr, 'write')
           .mockImplementation(() => true)
 
-        new ConsoleLogger('Ctx', { colors: false, ...options }).error(
-          createException(),
-        )
-        const output = stderr.mock.calls
-          .map(([chunk]) => String(chunk))
-          .join('')
-        stderr.mockRestore()
+        let output: string
+        try {
+          new ConsoleLogger('Ctx', { colors: false, ...options }).error(
+            createException(),
+          )
+          output = stderr.mock.calls.map(([chunk]) => String(chunk)).join('')
+        } finally {
+          stderr.mockRestore()
+        }
 
         expect(output).toContain('Some message')
         expect(output).not.toContain('P1001')

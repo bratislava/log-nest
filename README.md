@@ -431,7 +431,8 @@ export class FormRepository implements HasErrorFactoryService {
 
 ### Testing: `@bratislava/log-nest/testing`
 
-`@bratislava/log-nest/testing` exports the `toBeLogNestError` matcher. Register it once, in a Vitest `setupFiles` entry:
+`@bratislava/log-nest/testing` exports Vitest matchers for exceptions from `ErrorFactoryService`. Register them once, in a
+Vitest `setupFiles` entry:
 
 ```ts
 import { logNestMatchers } from '@bratislava/log-nest/testing'
@@ -440,44 +441,45 @@ import { expect } from 'vitest'
 expect.extend(logNestMatchers)
 ```
 
-The matcher passes only for an `HttpException` from `ErrorFactoryService` and compares like `toMatchObject`: fields you
-leave out aren't checked, any field can be an asymmetric matcher, and objects such as `console` match when they contain
-the expected keys. Pass `{ exact: true }` to require every field to be equal instead. Requires Vitest 5.
+| Matcher                                    | Passes when                                                                                                                                                                                                                                                                                      |
+|--------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `toBeLogNestError()`                       | the value is an exception from `ErrorFactoryService`                                                                                                                                                                                                                                             |
+| `toMatchLogNestError(expected, options?)`  | it is one and matches `expected` like `toMatchObject`: fields left out aren't checked and objects match by containment                                                                                                                                                                           |
+| `toEqualLogNestError(expected, options?)`  | it is one and every field equals `expected` like `toEqual`; a field you leave out (in practice `console` or `error`) passes only if the exception doesn't have it                                                                                                                                |
+| `toThrowLogNestError(expected?, options?)` | the function throws (or, with `.rejects`, the promise rejects with) one that matches like `toMatchLogNestError`. An async function, a value that isn't a function, or `.resolves` throws an error, also with `.not`; use `await expect(promise).rejects.toThrowLogNestError(...)` for async code |
+
+Every field accepts asymmetric matchers, and `toBeLogNestError`, `toMatchLogNestError` and `toEqualLogNestError` also
+work as one (`expect.toMatchLogNestError(...)`). `toThrowLogNestError` needs a function or `.rejects`, so it doesn't.
+Requires Vitest 5.
 
 ```ts
-await expect(service.getForm(formId)).rejects.toBeLogNestError({
+await expect(service.getForm(formId)).rejects.toThrowLogNestError({
   errorEnum: FormsErrorsEnum.FORM_NOT_FOUND_ERROR,
   message: expect.stringContaining(formId),
   error: dbError,
 })
 
-// also usable as an asymmetric matcher, e.g. in toHaveBeenCalledWith or toThrow
 expect(logger.error).toHaveBeenCalledWith(
-  expect.toBeLogNestError({ error: { code: 'P2002' } }),
+  expect.toMatchLogNestError({ error: { code: 'P2002' } }),
 )
 
-// every field must be given and equal; console and error are not matched by subset
-expect(error).toBeLogNestError(
-  {
-    status: HttpStatus.NOT_FOUND,
-    errorEnum: FormsErrorsEnum.FORM_NOT_FOUND_ERROR,
-    message: `Form ${formId} not found`,
-    console: { formId },
-    error: undefined,
-    alert: 0,
-  },
-  { exact: true },
-)
+expect(error).toEqualLogNestError({
+  status: HttpStatus.NOT_FOUND,
+  errorEnum: FormsErrorsEnum.FORM_NOT_FOUND_ERROR,
+  message: `Form ${formId} not found`,
+  console: { formId },
+  alert: false,
+})
 ```
 
-| Field       | Compared with                                                                                                                                                                                                                                                                                                                             |
-|-------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `status`    | `exception.getStatus()`                                                                                                                                                                                                                                                                                                                   |
-| `errorEnum` | the response `errorName`                                                                                                                                                                                                                                                                                                                  |
-| `message`   | the response `message`                                                                                                                                                                                                                                                                                                                    |
-| `console`   | the log-only `console` value                                                                                                                                                                                                                                                                                                              |
-| `error`     | the original cause the factory keeps on the exception. An `Error` must be the same instance (like `toBe`). Anything else is compared like `toMatchObject` (`toEqual` with `exact: true`): `{ code: 'P2002' }` matches a cause with that `code`, and asymmetric matchers such as `expect.any(PrismaClientKnownRequestError)` work as usual |
-| `alert`     | `1` if `errorEnum` is in the factory's `alertReporting` list, else `0`                                                                                                                                                                                                                                                                    |
+| Field       | Compared with                                                                                                                                                                                                                                                                                                                                                                                                     |
+|-------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `status`    | `exception.getStatus()`                                                                                                                                                                                                                                                                                                                                                                                           |
+| `errorEnum` | the response `errorName`                                                                                                                                                                                                                                                                                                                                                                                          |
+| `message`   | the response `message`                                                                                                                                                                                                                                                                                                                                                                                            |
+| `console`   | the log-only `console` value                                                                                                                                                                                                                                                                                                                                                                                      |
+| `error`     | the original error the factory keeps on the exception. An `Error` must be the same instance (like `toBe`) unless `{ errorComparison: 'toEqual' }` is passed. Anything else is compared like the rest of the fields: `{ code: 'P2002' }` matches a cause with that `code`, and asymmetric matchers such as `expect.any(PrismaClientKnownRequestError)` work as usual. `error: undefined` asserts there is no cause |
+| `alert`     | `true` if `errorEnum` is in the factory's `alertReporting` list, else `false`                                                                                                                                                                                                                                                                                                                                     |
 
 ## Exports
 
@@ -494,7 +496,7 @@ expect(error).toBeLogNestError(
 | `LogAllowListService`, `LogAllowShape`                         | class / type      | structural key filtering for logged data                                                            |
 | `ErrorEnum`, `ErrorResponseEnum`                               | enums             | shared base error codes + messages                                                                  |
 | `toLogfmt`, `errorToLogfmt`, `escapeForLogfmt`                 | functions         | logfmt helpers                                                                                      |
-| `toBeLogNestError` (from `@bratislava/log-nest/testing`)       | test matcher      | matches an `ErrorFactoryService` exception by the given fields                                      |
+| `logNestMatchers` (from `@bratislava/log-nest/testing`)        | test matchers     | Vitest matchers for `ErrorFactoryService` exceptions (`toMatchLogNestError` and others)             |
 | `HandleErrors`, `CatchDatabaseError`, `HasErrorFactoryService` | decorators / type | error-handling decorators                                                                           |
 | `LogRedact`, `LogAllowList`                                    | decorators        | per-route redaction / allowlist filtering, additive over the global config                          |
 

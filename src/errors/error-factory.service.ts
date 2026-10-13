@@ -12,7 +12,7 @@ import { AxiosError } from 'axios'
 import { NEST_LOGGING_OPTIONS, type NestLoggingOptions } from '../options'
 import { ErrorEnum, ErrorResponseEnum } from './base-errors.enum'
 import { LogNestErrorEnumRegistry } from './error-enum-registry'
-import { ErrorSymbols } from './error-symbols'
+import { ErrorSymbols, rawErrorSymbol } from './error-symbols'
 import { ResponseErrorInternalDto } from './response-error.dto'
 import { FromAxiosErrorOptions } from './status-override'
 
@@ -293,7 +293,7 @@ export class ErrorFactoryService<TErrorEnum extends string = DefaultErrorEnum> {
       response[ErrorSymbols.alert] = 1
     }
     const exception = new HttpException(response, statusCode)
-    Object.defineProperty(exception, ErrorSymbols.originalErrorForTesting, {
+    Object.defineProperty(exception, rawErrorSymbol, {
       value: errorCause,
     })
 

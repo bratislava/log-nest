@@ -3,9 +3,6 @@ const consoleSymbol: unique symbol = Symbol('console')
 const errorCauseSymbol: unique symbol = Symbol('errorCause')
 const causedByMessageSymbol: unique symbol = Symbol('causedByMessage')
 const causedByConsoleSymbol: unique symbol = Symbol('causedByConsole')
-const originalErrorForTestingSymbol: unique symbol = Symbol(
-  'originalErrorForTesting',
-)
 
 /**
  * Symbol keys for the internal log metadata attached to error responses. Keyed
@@ -17,5 +14,11 @@ export const ErrorSymbols = {
   errorCause: errorCauseSymbol,
   causedByMessage: causedByMessageSymbol,
   causedByConsole: causedByConsoleSymbol,
-  originalErrorForTesting: originalErrorForTestingSymbol,
 } as const
+
+/**
+ * Key on the HttpException itself (not its response) for the `error` passed to
+ * ErrorFactoryService, unprocessed. Non-enumerable and never logged; read by
+ * the matchers in `@bratislava/log-nest/testing`.
+ */
+export const rawErrorSymbol: unique symbol = Symbol('rawError')
