@@ -1,4 +1,14 @@
-import isPlainObject from 'is-plain-obj'
+/**
+ * Whether `value` is a plain object literal, which `subsetForDiff` trims.
+ * Arrays, Sets, Errors and asymmetric matchers are compared as whole values.
+ */
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+  const proto = Object.getPrototypeOf(value) as unknown
+  return proto === Object.prototype || proto === null
+}
 
 /**
  * The part of `actual` that `expected` describes, at every depth, so the diff

@@ -31,6 +31,9 @@ declare module 'vitest' {
       expected: LogNestErrorExpectation,
       options?: LogNestErrorMatchOptions,
     ) => R
+  }
+
+  interface Assertion<R> {
     toThrowLogNestError: (
       expected?: LogNestErrorExpectation,
       options?: LogNestErrorMatchOptions,

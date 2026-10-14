@@ -441,16 +441,20 @@ import { expect } from 'vitest'
 expect.extend(logNestMatchers)
 ```
 
-| Matcher                                    | Passes when                                                                                                                                                                                                                                                                                      |
-|--------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `toBeLogNestError()`                       | the value is an exception from `ErrorFactoryService`                                                                                                                                                                                                                                             |
-| `toMatchLogNestError(expected, options?)`  | it is one and matches `expected` like `toMatchObject`: fields left out aren't checked and objects match by containment                                                                                                                                                                           |
-| `toEqualLogNestError(expected, options?)`  | it is one and every field equals `expected` like `toEqual`; a field you leave out (in practice `console` or `error`) passes only if the exception doesn't have it                                                                                                                                |
-| `toThrowLogNestError(expected?, options?)` | the function throws (or, with `.rejects`, the promise rejects with) one that matches like `toMatchLogNestError`. An async function, a value that isn't a function, or `.resolves` throws an error, also with `.not`; use `await expect(promise).rejects.toThrowLogNestError(...)` for async code |
+| Matcher                                    | Passes when                                                                                                                                                                                              |
+|--------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `toBeLogNestError()`                       | the value is an exception from `ErrorFactoryService`                                                                                                                                                     |
+| `toMatchLogNestError(expected, options?)`  | it is one and matches `expected` like `toMatchObject`: fields left out aren't checked and objects match by containment                                                                                   |
+| `toEqualLogNestError(expected, options?)`  | it is one and every field equals `expected` like `toEqual`; a field you leave out (in practice `console` or `error`) passes only if the exception doesn't have it                                        |
+| `toThrowLogNestError(expected?, options?)` | the function throws (or, with `.rejects`, the promise rejects with) one. Without `expected` it only checks that the thrown value is a log-nest exception; with it, it matches like `toMatchLogNestError` |
+
+`toThrowLogNestError` needs a function or `.rejects`, like Vitest's `toThrow`: an async function, a value that isn't a
+function, or `.resolves` throws an error, also with `.not`. For async code use
+`await expect(promise).rejects.toThrowLogNestError(...)`.
 
 Every field accepts asymmetric matchers, and `toBeLogNestError`, `toMatchLogNestError` and `toEqualLogNestError` also
-work as one (`expect.toMatchLogNestError(...)`). `toThrowLogNestError` needs a function or `.rejects`, so it doesn't.
-Requires Vitest 5.
+work as one (`expect.toMatchLogNestError(...)`). `toThrowLogNestError` is only available on `expect(...)`, like
+`toThrow`. Requires Vitest 5.
 
 ```ts
 await expect(service.getForm(formId)).rejects.toThrowLogNestError({
@@ -472,14 +476,29 @@ expect(error).toEqualLogNestError({
 })
 ```
 
-| Field       | Compared with                                                                                                                                                                                                                                                                                                                                                                                                     |
-|-------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `status`    | `exception.getStatus()`                                                                                                                                                                                                                                                                                                                                                                                           |
-| `errorEnum` | the response `errorName`                                                                                                                                                                                                                                                                                                                                                                                          |
-| `message`   | the response `message`                                                                                                                                                                                                                                                                                                                                                                                            |
-| `console`   | the log-only `console` value                                                                                                                                                                                                                                                                                                                                                                                      |
-| `error`     | the original error the factory keeps on the exception. An `Error` must be the same instance (like `toBe`) unless `{ errorComparison: 'toEqual' }` is passed. Anything else is compared like the rest of the fields: `{ code: 'P2002' }` matches a cause with that `code`, and asymmetric matchers such as `expect.any(PrismaClientKnownRequestError)` work as usual. `error: undefined` asserts there is no cause |
-| `alert`     | `true` if `errorEnum` is in the factory's `alertReporting` list, else `false`                                                                                                                                                                                                                                                                                                                                     |
+| Field       | Compared with                                                                                                                                                                                                                                                                                                                                                                                                               |
+|-------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `status`    | `exception.getStatus()`                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `errorEnum` | the response `errorName`                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `message`   | the response `message`                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `console`   | the log-only `console` value                                                                                                                                                                                                                                                                                                                                                                                                |
+| `error`     | the original error the factory keeps on the exception. An `Error` must be the same instance (like `toBe`) unless `errorComparison: 'toEqual'` is passed (see Options). Anything else is compared like the rest of the fields: `{ code: 'P2002' }` matches a cause with that `code`, and asymmetric matchers such as `expect.any(PrismaClientKnownRequestError)` work as usual. `error: undefined` asserts there is no cause |
+| `alert`     | `true` if `errorEnum` is in the factory's `alertReporting` list, else `false`                                                                                                                                                                                                                                                                                                                                               |
+
+**Options.** `toMatchLogNestError`, `toEqualLogNestError` and `toThrowLogNestError` take an optional second argument,
+`LogNestErrorMatchOptions`:
+
+| Option            | Values                          | Effect                                                                                                                                                          |
+|-------------------|---------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `errorComparison` | `'toBe'` (default), `'toEqual'` | how an `Error` passed as `error` is compared: `'toBe'` requires the same instance, `'toEqual'` also accepts a different instance with the same class and fields |
+
+```ts
+// passes for a cause that is an Error with the same class, message and fields, not only the same instance
+expect(error).toMatchLogNestError(
+  { error: new Error('connection reset') },
+  { errorComparison: 'toEqual' },
+)
+```
 
 ## Exports
 
