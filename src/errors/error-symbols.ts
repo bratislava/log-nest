@@ -15,3 +15,10 @@ export const ErrorSymbols = {
   causedByMessage: causedByMessageSymbol,
   causedByConsole: causedByConsoleSymbol,
 } as const
+
+/**
+ * Key on the HttpException itself (not its response) for the `error` passed to
+ * ErrorFactoryService, unprocessed. Non-enumerable and never logged; read by
+ * the matchers in `@bratislava/log-nest/testing`.
+ */
+export const rawErrorSymbol: unique symbol = Symbol('rawError')
