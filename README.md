@@ -141,6 +141,9 @@ export class FormsService {
   produced log line carries `alert=1`.
 - `console` (a string or object) and the `error` cause are attached to the log entry only. The client never sees them.
   The cause's stack is chained onto the exception's stack.
+- The raw `error` is also kept on every exception, in production too, under a non-enumerable symbol key, so the testing
+  matchers can compare against it. It isn't logged or sent to the client, but stays reachable for as long as the
+  exception does.
 - `ErrorResponseEnum` holds a default client-facing message for every base error code, so the common idiom is pairing
   the two: `errorEnum: ErrorEnum.NOT_FOUND_ERROR, message: ErrorResponseEnum.NOT_FOUND_ERROR`.
 
@@ -516,6 +519,7 @@ expect(error).toMatchLogNestError(
 | `ErrorEnum`, `ErrorResponseEnum`                               | enums             | shared base error codes + messages                                                                  |
 | `toLogfmt`, `errorToLogfmt`, `escapeForLogfmt`                 | functions         | logfmt helpers                                                                                      |
 | `logNestMatchers` (from `@bratislava/log-nest/testing`)        | test matchers     | Vitest matchers for `ErrorFactoryService` exceptions (`toMatchLogNestError` and others)             |
+| `LogNestErrorExpectation`, `LogNestErrorMatchOptions`          | types             | the matchers' `expected` and `options` arguments (from `@bratislava/log-nest/testing`)              |
 | `HandleErrors`, `CatchDatabaseError`, `HasErrorFactoryService` | decorators / type | error-handling decorators                                                                           |
 | `LogRedact`, `LogAllowList`                                    | decorators        | per-route redaction / allowlist filtering, additive over the global config                          |
 
