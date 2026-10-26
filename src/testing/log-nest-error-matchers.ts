@@ -6,10 +6,12 @@ import { ErrorSymbols, rawErrorSymbol } from '../errors/error-symbols'
 import { ResponseErrorInternalDto } from '../errors/response-error.dto'
 import { subsetForDiff } from './subset-for-diff'
 
-export interface LogNestErrorExpectation extends Partial<LoggingExceptionOptions> {
-  status?: number
+export interface LogNestErrorEqualExpectation extends LoggingExceptionOptions {
+  status: number
   alert?: boolean
 }
+
+export type LogNestErrorExpectation = Partial<LogNestErrorEqualExpectation>
 
 export interface LogNestErrorMatchOptions {
   /**
@@ -28,7 +30,7 @@ declare module 'vitest' {
       options?: LogNestErrorMatchOptions,
     ) => R
     toEqualLogNestError: (
-      expected: LogNestErrorExpectation,
+      expected: LogNestErrorEqualExpectation,
       options?: LogNestErrorMatchOptions,
     ) => R
   }
@@ -36,6 +38,10 @@ declare module 'vitest' {
   interface Assertion<R> {
     toThrowLogNestError: (
       expected?: LogNestErrorExpectation,
+      options?: LogNestErrorMatchOptions,
+    ) => R
+    toThrowEqualLogNestError: (
+      expected: LogNestErrorEqualExpectation,
       options?: LogNestErrorMatchOptions,
     ) => R
   }
@@ -155,7 +161,10 @@ function matchLogNestError(
   const toEqualTesters = [...state.customTesters, iterableEquality]
   const toMatchObjectTesters = [...toEqualTesters, subsetEquality]
   const testers = subset ? toMatchObjectTesters : toEqualTesters
-  const { error: expectedError, ...expectedRest } = expected
+  const expectedFields = subset
+    ? expected
+    : { ...expected, alert: expected.alert ?? false }
+  const { error: expectedError, ...expectedRest } = expectedFields
   const { error: actualError, ...actualRest } = actualFields
 
   const error = matchError(
@@ -194,7 +203,7 @@ function matchLogNestError(
         ? `expected log-nest error to ${verb} the expectation. Besides the differences below, \`error\` is a different Error instance with the same structure, which the diff can't show. ${instanceHint}`
         : `expected log-nest error to ${verb} the expectation`,
     actual: subset ? subsetForDiff(actualFields, expected) : actualFields,
-    expected,
+    expected: expectedFields,
   }
 }
 
@@ -233,7 +242,7 @@ function toMatchLogNestError(
 function toEqualLogNestError(
   this: MatcherState,
   actual: unknown,
-  expected: LogNestErrorExpectation,
+  expected: LogNestErrorEqualExpectation,
   options: LogNestErrorMatchOptions = {},
 ): SyncMatcherResult {
   if (!isLogNestError(actual)) {
@@ -260,26 +269,26 @@ function handleRejection(thenable: PromiseLike<unknown>): void {
   Promise.resolve(thenable).catch(() => undefined)
 }
 
-function toThrowLogNestError(
-  this: MatcherState,
+function checkThrown(
+  state: MatcherState,
+  matcherName: string,
   actual: unknown,
-  expected?: LogNestErrorExpectation,
-  options: LogNestErrorMatchOptions = {},
+  check: (thrown: unknown) => SyncMatcherResult,
 ): SyncMatcherResult {
-  if (this.promise === 'resolves') {
+  if (state.promise === 'resolves') {
     throw new TypeError(
-      'toThrowLogNestError cannot be used with .resolves; use .rejects',
+      `${matcherName} cannot be used with .resolves; use .rejects`,
     )
   }
-  if (this.promise === 'rejects') {
-    return checkThrown(this, actual, expected, options)
+  if (state.promise === 'rejects') {
+    return check(actual)
   }
   if (typeof actual !== 'function') {
     if (isThenable(actual)) {
       handleRejection(actual)
     }
     throw new TypeError(
-      `toThrowLogNestError expects a function, or a promise with .rejects, but received ${this.utils.printReceived(actual)}`,
+      `${matcherName} expects a function, or a promise with .rejects, but received ${state.utils.printReceived(actual)}`,
     )
   }
 
@@ -287,12 +296,12 @@ function toThrowLogNestError(
   try {
     result = (actual as () => unknown)()
   } catch (error) {
-    return checkThrown(this, error, expected, options)
+    return check(error)
   }
   if (isThenable(result)) {
     handleRejection(result)
     throw new TypeError(
-      'toThrowLogNestError got a function that returned a promise. For an async function use `await expect(fn()).rejects.toThrowLogNestError(...)`',
+      `${matcherName} got a function that returned a promise. For an async function use \`await expect(fn()).rejects.${matcherName}(...)\``,
     )
   }
   return {
@@ -301,15 +310,28 @@ function toThrowLogNestError(
   }
 }
 
-function checkThrown(
-  state: MatcherState,
-  thrown: unknown,
-  expected: LogNestErrorExpectation | undefined,
-  options: LogNestErrorMatchOptions,
+function toThrowLogNestError(
+  this: MatcherState,
+  actual: unknown,
+  expected?: LogNestErrorExpectation,
+  options: LogNestErrorMatchOptions = {},
 ): SyncMatcherResult {
-  return expected === undefined
-    ? toBeLogNestError.call(state, thrown)
-    : toMatchLogNestError.call(state, thrown, expected, options)
+  return checkThrown(this, 'toThrowLogNestError', actual, (thrown) =>
+    expected === undefined
+      ? toBeLogNestError.call(this, thrown)
+      : toMatchLogNestError.call(this, thrown, expected, options),
+  )
+}
+
+function toThrowEqualLogNestError(
+  this: MatcherState,
+  actual: unknown,
+  expected: LogNestErrorEqualExpectation,
+  options: LogNestErrorMatchOptions = {},
+): SyncMatcherResult {
+  return checkThrown(this, 'toThrowEqualLogNestError', actual, (thrown) =>
+    toEqualLogNestError.call(this, thrown, expected, options),
+  )
 }
 
 export const logNestMatchers = {
@@ -317,4 +339,5 @@ export const logNestMatchers = {
   toMatchLogNestError,
   toEqualLogNestError,
   toThrowLogNestError,
+  toThrowEqualLogNestError,
 }
