@@ -32,6 +32,31 @@ describe('emailRedactor', () => {
       'just an @ sign, not an email',
     )
   })
+
+  it.each([
+    [
+      'first@example.com_second@example.org',
+      '[REDACTED:email]_[REDACTED:email]',
+    ],
+    ['user@host@example.com', 'user@[REDACTED:email]'],
+    ['+421user@example.com', '+[REDACTED:email]'],
+    ['.@example.com@example.org', '.@[REDACTED:email]'],
+  ])('masks adjacent and overlapping candidates in %j', (line, expected) => {
+    expect(emailRedactor.redact(line)).toBe(expected)
+  })
+
+  it('handles a long run of local-part characters in linear time', () => {
+    // 60k characters: a few milliseconds when linear, seconds when quadratic.
+    // The regex runs synchronously, so a test timeout couldn't interrupt it.
+    const token = 'Qm9va+'.repeat(10_000)
+    const start = performance.now()
+
+    expect(emailRedactor.redact(`${token}@`)).toBe(`${token}@`)
+    expect(emailRedactor.redact(`${token}@example.com`)).toBe(
+      '[REDACTED:email]',
+    )
+    expect(performance.now() - start).toBeLessThan(500)
+  })
 })
 
 describe('birthNumberRedactor', () => {
