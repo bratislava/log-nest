@@ -6,6 +6,7 @@ import { ErrorFactoryService } from '../../errors/error-factory.service'
 import { ErrorSymbols } from '../../errors/error-symbols'
 import { ResponseErrorInternalDto } from '../../errors/response-error.dto'
 import {
+  LogNestErrorEqualExpectation,
   LogNestErrorExpectation,
   logNestMatchers,
 } from '../log-nest-error-matchers'
@@ -32,14 +33,14 @@ const thrown = errorFactory.InternalServerErrorException({
   console: { formId, attempt: 2 },
   error: cause,
 })
-const expectationWithoutConsole: LogNestErrorExpectation = {
+const expectationWithoutConsole: LogNestErrorEqualExpectation = {
   status: HttpStatus.INTERNAL_SERVER_ERROR,
   errorEnum: ErrorEnum.DATABASE_ERROR,
   message: `Saving form failed. Form id: ${formId}`,
   error: cause,
   alert: true,
 }
-const fullExpectation: LogNestErrorExpectation = {
+const fullExpectation: LogNestErrorEqualExpectation = {
   ...expectationWithoutConsole,
   console: { formId, attempt: 2 },
 }
@@ -458,11 +459,10 @@ describe('toEqualLogNestError', () => {
       message: 'Invalid form',
       console: { ids: new Set([1]) },
     })
-    const expectation: LogNestErrorExpectation = {
+    const expectation: LogNestErrorEqualExpectation = {
       status: HttpStatus.BAD_REQUEST,
       errorEnum: ErrorEnum.BAD_REQUEST_ERROR,
       message: 'Invalid form',
-      alert: false,
     }
 
     expect(error).toEqualLogNestError({
@@ -477,7 +477,10 @@ describe('toEqualLogNestError', () => {
 
   it('should diff every field on failure', () => {
     const failure = failureOf(() => {
-      expect(thrown).toEqualLogNestError({ status: HttpStatus.NOT_FOUND })
+      expect(thrown).toEqualLogNestError({
+        ...fullExpectation,
+        status: HttpStatus.NOT_FOUND,
+      })
     })
 
     expect(failure.message).toBe(
@@ -487,6 +490,143 @@ describe('toEqualLogNestError', () => {
       errorEnum: ErrorEnum.DATABASE_ERROR,
       console: { formId, attempt: 2 },
     })
+  })
+
+  describe('alert', () => {
+    const notFound = errorFactory.NotFoundException({
+      errorEnum: ErrorEnum.NOT_FOUND_ERROR,
+      message: 'Form not found',
+    })
+    const notFoundExpectation: LogNestErrorEqualExpectation = {
+      status: HttpStatus.NOT_FOUND,
+      errorEnum: ErrorEnum.NOT_FOUND_ERROR,
+      message: 'Form not found',
+    }
+
+    it('should treat a missing alert as false', () => {
+      expect(notFound).toEqualLogNestError(notFoundExpectation)
+      expect(notFound).not.toEqualLogNestError({
+        ...notFoundExpectation,
+        alert: true,
+      })
+    })
+
+    it('should not match an alerting error when alert is left out', () => {
+      const withoutAlert = { ...fullExpectation, alert: undefined }
+
+      expect(thrown).not.toEqualLogNestError(withoutAlert)
+    })
+
+    it('should show the default alert in the diff', () => {
+      const failure = failureOf(() => {
+        expect(notFound).toEqualLogNestError({
+          ...notFoundExpectation,
+          message: 'Other',
+        })
+      })
+
+      expect(failure.expected).toMatchObject({ alert: false })
+    })
+  })
+})
+
+describe('toThrowEqualLogNestError', () => {
+  const throwing = () => {
+    throw thrown
+  }
+
+  it('should compare what a function throws by equality', () => {
+    expect(throwing).toThrowEqualLogNestError(fullExpectation)
+    expect(throwing).toThrowLogNestError(expectationWithoutConsole)
+    expect(throwing).not.toThrowEqualLogNestError(expectationWithoutConsole)
+    expect(throwing).not.toThrowEqualLogNestError({
+      ...fullExpectation,
+      status: HttpStatus.NOT_FOUND,
+    })
+  })
+
+  it('should treat a missing alert as false', () => {
+    const withoutAlert = { ...fullExpectation, alert: undefined }
+
+    expect(throwing).not.toThrowEqualLogNestError(withoutAlert)
+  })
+
+  describe('subsets', () => {
+    const withCause = errorFactory.InternalServerErrorException({
+      errorEnum: ErrorEnum.DATABASE_ERROR,
+      message: 'Saving form failed',
+      console: { formId, attempt: 2 },
+      error: { code: 'P2002', target: ['email'] },
+    })
+    const throwingWithCause = () => {
+      throw withCause
+    }
+    const requiredFields: LogNestErrorEqualExpectation = {
+      status: HttpStatus.INTERNAL_SERVER_ERROR,
+      errorEnum: ErrorEnum.DATABASE_ERROR,
+      message: 'Saving form failed',
+    }
+    const console = { formId, attempt: 2 }
+    const error = { code: 'P2002', target: ['email'] }
+    const fullWithCause: LogNestErrorEqualExpectation = {
+      ...requiredFields,
+      console,
+      error,
+      alert: true,
+    }
+
+    it.each<[string, LogNestErrorEqualExpectation]>([
+      ['a left-out console', { ...requiredFields, error, alert: true }],
+      ['a left-out cause', { ...requiredFields, console, alert: true }],
+      [
+        'a left-out alert on an alerting error',
+        { ...requiredFields, console, error },
+      ],
+      ['a partial console', { ...fullWithCause, console: { formId } }],
+      ['a partial cause', { ...fullWithCause, error: { code: 'P2002' } }],
+    ])(
+      'should accept %s with toThrowLogNestError but not with toThrowEqualLogNestError',
+      async (_name, expectation) => {
+        expect(throwingWithCause).toThrowLogNestError(expectation)
+        expect(throwingWithCause).not.toThrowEqualLogNestError(expectation)
+
+        await expect(Promise.reject(withCause)).rejects.toThrowLogNestError(
+          expectation,
+        )
+        await expect(
+          Promise.reject(withCause),
+        ).rejects.not.toThrowEqualLogNestError(expectation)
+      },
+    )
+
+    it('should accept the full expectation with both', async () => {
+      expect(throwingWithCause).toThrowLogNestError(fullWithCause)
+      expect(throwingWithCause).toThrowEqualLogNestError(fullWithCause)
+      await expect(Promise.reject(withCause)).rejects.toThrowEqualLogNestError(
+        fullWithCause,
+      )
+    })
+  })
+
+  it('should not pass when the function does not throw', () => {
+    expect(() => undefined).not.toThrowEqualLogNestError(fullExpectation)
+  })
+
+  it('should name itself when refusing an async function', () => {
+    expect(() => {
+      expect(async () => Promise.reject(thrown)).toThrowEqualLogNestError(
+        fullExpectation,
+      )
+    }).toThrow(/rejects\.toThrowEqualLogNestError/)
+  })
+
+  it('should work with rejects', async () => {
+    await expect(Promise.reject(thrown)).rejects.toThrowEqualLogNestError(
+      fullExpectation,
+    )
+    await expect(Promise.reject(thrown)).rejects.not.toThrowEqualLogNestError(
+      expectationWithoutConsole,
+    )
   })
 })
 

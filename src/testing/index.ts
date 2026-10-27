@@ -1,4 +1,5 @@
 export {
+  type LogNestErrorEqualExpectation,
   type LogNestErrorExpectation,
   type LogNestErrorMatchOptions,
   logNestMatchers,

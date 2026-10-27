@@ -444,26 +444,34 @@ import { expect } from 'vitest'
 expect.extend(logNestMatchers)
 ```
 
-| Matcher                                    | Passes when                                                                                                                                                                                              |
-|--------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `toBeLogNestError()`                       | the value is an exception from `ErrorFactoryService`                                                                                                                                                     |
-| `toMatchLogNestError(expected, options?)`  | it is one and matches `expected` like `toMatchObject`: fields left out aren't checked and objects match by containment                                                                                   |
-| `toEqualLogNestError(expected, options?)`  | it is one and every field equals `expected` like `toEqual`; a field you leave out (in practice `console` or `error`) passes only if the exception doesn't have it                                        |
-| `toThrowLogNestError(expected?, options?)` | the function throws (or, with `.rejects`, the promise rejects with) one. Without `expected` it only checks that the thrown value is a log-nest exception; with it, it matches like `toMatchLogNestError` |
+| Matcher                                        | Passes when                                                                                                                                                                                                                  |
+|------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `toBeLogNestError()`                           | the value is an exception from `ErrorFactoryService`                                                                                                                                                                         |
+| `toMatchLogNestError(expected, options?)`      | it is one and matches `expected` like `toMatchObject`: fields left out aren't checked and objects match by containment                                                                                                       |
+| `toEqualLogNestError(expected, options?)`      | it is one and every field equals `expected` like `toEqual`. `status`, `errorEnum` and `message` are required; a left-out `alert` means `false`, a left-out `console` or `error` passes only if the exception doesn't have it |
+| `toThrowLogNestError(expected?, options?)`     | the function throws (or, with `.rejects`, the promise rejects with) one. Without `expected` it only checks that the thrown value is a log-nest exception; with it, it matches like `toMatchLogNestError`                     |
+| `toThrowEqualLogNestError(expected, options?)` | the function throws (or, with `.rejects`, the promise rejects with) one that equals `expected` like `toEqualLogNestError`. Prefer it to `toThrowLogNestError` unless the test cares about a single field                     |
 
-`toThrowLogNestError` needs a function or `.rejects`, like Vitest's `toThrow`: an async function, a value that isn't a
-function, or `.resolves` throws an error, also with `.not`. For async code use
+`toThrowLogNestError` and `toThrowEqualLogNestError` need a function or `.rejects`, like Vitest's `toThrow`: an async
+function, a value that isn't a function, or `.resolves` throws an error, also with `.not`. For async code use
 `await expect(promise).rejects.toThrowLogNestError(...)`.
 
 Every field accepts asymmetric matchers, and `toBeLogNestError`, `toMatchLogNestError` and `toEqualLogNestError` also
-work as one (`expect.toMatchLogNestError(...)`). `toThrowLogNestError` is only available on `expect(...)`, like
+work as one (`expect.toMatchLogNestError(...)`). The `toThrow…` matchers are only available on `expect(...)`, like
 `toThrow`. Requires Vitest 5.
 
 ```ts
+// the whole error: a different status, a dropped alert or an extra cause all fail
+await expect(service.getForm(formId)).rejects.toThrowEqualLogNestError({
+  status: HttpStatus.NOT_FOUND,
+  errorEnum: FormsErrorsEnum.FORM_NOT_FOUND_ERROR,
+  message: `Form ${formId} not found`,
+  error: dbError,
+})
+
+// only the given fields
 await expect(service.getForm(formId)).rejects.toThrowLogNestError({
   errorEnum: FormsErrorsEnum.FORM_NOT_FOUND_ERROR,
-  message: expect.stringContaining(formId),
-  error: dbError,
 })
 
 expect(logger.error).toHaveBeenCalledWith(
@@ -475,7 +483,6 @@ expect(error).toEqualLogNestError({
   errorEnum: FormsErrorsEnum.FORM_NOT_FOUND_ERROR,
   message: `Form ${formId} not found`,
   console: { formId },
-  alert: false,
 })
 ```
 
@@ -486,9 +493,9 @@ expect(error).toEqualLogNestError({
 | `message`   | the response `message`                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `console`   | the log-only `console` value                                                                                                                                                                                                                                                                                                                                                                                                |
 | `error`     | the original error the factory keeps on the exception. An `Error` must be the same instance (like `toBe`) unless `errorComparison: 'toEqual'` is passed (see Options). Anything else is compared like the rest of the fields: `{ code: 'P2002' }` matches a cause with that `code`, and asymmetric matchers such as `expect.any(PrismaClientKnownRequestError)` work as usual. `error: undefined` asserts there is no cause |
-| `alert`     | `true` if `errorEnum` is in the factory's `alertReporting` list, else `false`                                                                                                                                                                                                                                                                                                                                               |
+| `alert`     | `true` if `errorEnum` is in the factory's `alertReporting` list, else `false`. The equality matchers treat a left-out `alert` as `false`                                                                                                                                                                                                                                                                                    |
 
-**Options.** `toMatchLogNestError`, `toEqualLogNestError` and `toThrowLogNestError` take an optional second argument,
+**Options.** Every matcher except `toBeLogNestError` takes an optional second argument,
 `LogNestErrorMatchOptions`:
 
 | Option            | Values                          | Effect                                                                                                                                                          |
@@ -520,6 +527,7 @@ expect(error).toMatchLogNestError(
 | `toLogfmt`, `errorToLogfmt`, `escapeForLogfmt`                 | functions         | logfmt helpers                                                                                      |
 | `logNestMatchers` (from `@bratislava/log-nest/testing`)        | test matchers     | Vitest matchers for `ErrorFactoryService` exceptions (`toMatchLogNestError` and others)             |
 | `LogNestErrorExpectation`, `LogNestErrorMatchOptions`          | types             | the matchers' `expected` and `options` arguments (from `@bratislava/log-nest/testing`)              |
+| `LogNestErrorEqualExpectation`                                 | type              | the equality matchers' `expected`: `status`, `errorEnum` and `message` are required                 |
 | `HandleErrors`, `CatchDatabaseError`, `HasErrorFactoryService` | decorators / type | error-handling decorators                                                                           |
 | `LogRedact`, `LogAllowList`                                    | decorators        | per-route redaction / allowlist filtering, additive over the global config                          |
 
