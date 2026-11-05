@@ -7,6 +7,9 @@ import { ErrorFactoryService } from '../errors/error-factory.service'
 import { LineLoggerService } from '../logging/line-logger.service'
 import { LogRedactor } from './types/redaction.types'
 
+/** What `redact()` puts in place of a reference back to an object it's inside of. */
+const CIRCULAR = '[Circular]'
+
 type RedactedValue<T> = unknown extends T
   ? unknown
   : T extends object
@@ -64,7 +67,8 @@ export class LogRedactionService {
    * undefined, ...) comes back unchanged. `RedactedValue<T>` encodes that
    * split (object in gives `T` back, anything else gives back `T` or a
    * `string`), so the type is enforced by the compiler rather than asserted
-   * by a cast at the call site.
+   * by a cast at the call site. A reference back to an object it's inside of
+   * becomes `"[Circular]"`, so a cyclic value can't overflow the stack.
    *
    * Delegates to {@link applyRedactors} so the global-names merge happens
    * once here, not on every recursive step.
@@ -83,7 +87,11 @@ export class LogRedactionService {
    * rather than thrown, since this runs in the logging hot path and must
    * never throw.
    */
-  private applyRedactors(names: readonly string[], value: unknown): unknown {
+  private applyRedactors(
+    names: readonly string[],
+    value: unknown,
+    ancestors = new WeakSet<object>(),
+  ): unknown {
     if (typeof value === 'string') {
       return names.reduce((current, name) => {
         const redact = this.redactorMap.get(name)
@@ -100,17 +108,21 @@ export class LogRedactionService {
       }, value)
     }
 
-    if (Array.isArray(value)) {
-      return value.map((item) => this.applyRedactors(names, item))
-    }
-
     if (typeof value === 'object' && value !== null) {
-      return Object.fromEntries(
-        Object.entries(value).map(([key, entryValue]) => [
-          key,
-          this.applyRedactors(names, entryValue),
-        ]),
-      )
+      if (ancestors.has(value)) {
+        return CIRCULAR
+      }
+      ancestors.add(value)
+      const redacted = Array.isArray(value)
+        ? value.map((item) => this.applyRedactors(names, item, ancestors))
+        : Object.fromEntries(
+            Object.entries(value).map(([key, entryValue]) => [
+              key,
+              this.applyRedactors(names, entryValue, ancestors),
+            ]),
+          )
+      ancestors.delete(value)
+      return redacted
     }
 
     let stringified: string | undefined

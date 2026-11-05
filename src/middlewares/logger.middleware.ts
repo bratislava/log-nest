@@ -2,6 +2,7 @@ import { Injectable, NestMiddleware } from '@nestjs/common'
 import { NextFunction, Request, Response } from 'express'
 
 import { LineLoggerService } from '../logging/line-logger.service'
+import { notSerializable, safeStringify } from '../logging/logfmt'
 import { LogAllowListService } from '../sanitization/allow-list.service'
 import { LogRedactionService } from '../sanitization/log-redaction.service'
 import { LogAllowShape } from '../sanitization/types/allow-list.types'
@@ -71,13 +72,10 @@ export class AppLoggerMiddleware implements NestMiddleware {
         responseValue,
       )
 
-      const stringifiedResponseValue: unknown = JSON.stringify(
-        redactedResponseValue,
-      )
       const responseLogData =
         typeof redactedResponseValue === 'string'
           ? redactedResponseValue
-          : ((stringifiedResponseValue as string | undefined) ?? '')
+          : (safeStringify(redactedResponseValue) ?? '')
 
       // `error.filter.ts` parks log-only fields (errorType, stack, alert,
       // console, ...) here, since they never belong in the client-facing body.
@@ -217,8 +215,12 @@ export class AppLoggerMiddleware implements NestMiddleware {
     allowShape: LogAllowShape | undefined,
     value: unknown,
   ): unknown {
-    const filtered = this.logAllowListService.filter(allowShape, value)
-    return this.redactionService.redact(redactorNames, filtered)
+    try {
+      const filtered = this.logAllowListService.filter(allowShape, value)
+      return this.redactionService.redact(redactorNames, filtered)
+    } catch (error) {
+      return notSerializable(error)
+    }
   }
 
   private sanitizeToJson(
@@ -227,7 +229,7 @@ export class AppLoggerMiddleware implements NestMiddleware {
     value: unknown,
   ): string | undefined {
     // undefined when there's nothing to log (e.g. a request with no body)
-    return JSON.stringify(this.sanitize(redactorNames, allowShape, value))
+    return safeStringify(this.sanitize(redactorNames, allowShape, value))
   }
 
   private buildBaseLogObj(

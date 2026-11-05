@@ -15,16 +15,78 @@ export function escapeForLogfmt(value: string): string {
     .replaceAll('\n', String.raw`\n`)
 }
 
-/** Formats a single logfmt value: objects are JSON-serialized, then strings are escaped. */
+export function notSerializable(error: unknown): string {
+  try {
+    return `[not serializable: ${error instanceof Error ? error.message : typeof error}]`
+  } catch {
+    return '[not serializable]'
+  }
+}
+
+function withNotSerializableFallback(buildLogfmt: () => string): string {
+  try {
+    return buildLogfmt()
+  } catch (error) {
+    return `value="${escapeForLogfmt(notSerializable(error))}"`
+  }
+}
+
+/** A nested `Error` as a plain object, so it doesn't serialize as `{}`. */
+function nestedErrorToObj(error: Error): object {
+  const { name, message, stack, ...fields } = error
+  return { errorType: name, message, ...fields, stack }
+}
+
+/**
+ * `JSON.stringify` for logging. It never throws, and gives the same output
+ * for anything `JSON.stringify` can already serialize, except that nested
+ * errors keep their contents instead of becoming `{}`:
+ * - a `bigint` becomes its decimal string
+ * - an `HttpException` becomes what `errorToLogfmt` logs for it (so the
+ *   symbol-keyed log fields survive), any other `Error` becomes
+ *   `{ errorType, message, ...its own enumerable fields, stack }`
+ * - if serialization still throws (a circular reference, a throwing `toJSON`
+ *   or getter), the whole value becomes `"[not serializable: <message>]"`.
+ *   For a circular reference the message says which property closes the
+ *   cycle.
+ *
+ * Like `JSON.stringify`, returns `undefined` for e.g. `undefined`, functions
+ * and symbols.
+ */
+export function safeStringify(value: unknown): string | undefined {
+  try {
+    return JSON.stringify(value, (_key, child: unknown) => {
+      if (typeof child === 'bigint') {
+        return child.toString()
+      }
+      if (child instanceof HttpException) {
+        return httpExceptionToObj(child)
+      }
+      if (child instanceof Error) {
+        return nestedErrorToObj(child)
+      }
+      return child
+    })
+  } catch (error) {
+    return notSerializable(error)
+  }
+}
+
 function formatValue(value: unknown): string {
   if (typeof value === 'object' && value !== null) {
-    return escapeForLogfmt(JSON.stringify(value))
+    // undefined when e.g. a toJSON returns undefined, logged like a bare undefined
+    return escapeForLogfmt(safeStringify(value) ?? 'undefined')
   }
   if (typeof value === 'string') {
     return escapeForLogfmt(value)
   }
-  // primitive (number, boolean, bigint, symbol, null, undefined)
-  return String(value)
+  try {
+    // primitive (number, boolean, bigint, symbol, null, undefined) or a
+    // function, whose toString could throw
+    return escapeForLogfmt(String(value))
+  } catch (error) {
+    return escapeForLogfmt(notSerializable(error))
+  }
 }
 
 /**
@@ -124,22 +186,28 @@ function genericErrorToObj(error: Error, methodName?: string | symbol): object {
   }
 }
 
-export function errorToLogfmt(
-  error: unknown,
-  methodName?: string | symbol,
-): string {
+function errorToObj(error: unknown, methodName?: string | symbol): object {
   if (error instanceof HttpException) {
-    return objToLogfmt(httpExceptionToObj(error, methodName))
+    return httpExceptionToObj(error, methodName)
   }
   if (error instanceof Error) {
-    return objToLogfmt(genericErrorToObj(error, methodName))
+    return genericErrorToObj(error, methodName)
   }
-  return objToLogfmt({
+  return {
     errorType: `UnexpectedErrorType: ${typeof error}`,
     message: 'Unexpected type was thrown as error. This should not happen',
     ...(methodName === undefined ? {} : { methodName }),
     alert: 1,
-  })
+  }
+}
+
+export function errorToLogfmt(
+  error: unknown,
+  methodName?: string | symbol,
+): string {
+  return withNotSerializableFallback(() =>
+    objToLogfmt(errorToObj(error, methodName)),
+  )
 }
 
 export function isLogfmt(input: string): boolean {
@@ -152,6 +220,10 @@ export function isLogfmt(input: string): boolean {
 }
 
 export function toLogfmt(input: unknown): string {
+  return withNotSerializableFallback(() => toLogfmtUnguarded(input))
+}
+
+function toLogfmtUnguarded(input: unknown): string {
   if (!input) {
     return ''
   }

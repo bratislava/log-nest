@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common'
 import { AxiosError } from 'axios'
 
+import { safeStringify } from '../logging/logfmt'
 import { NEST_LOGGING_OPTIONS, type NestLoggingOptions } from '../options'
 import { ErrorEnum, ErrorResponseEnum } from './base-errors.enum'
 import { LogNestErrorEnumRegistry } from './error-enum-registry'
@@ -279,8 +280,12 @@ export class ErrorFactoryService<TErrorEnum extends string = DefaultErrorEnum> {
       }
     } else if (errorCause) {
       response[ErrorSymbols.errorCause] = typeof errorCause
-      // JSON.stringify returns undefined for e.g. functions and symbols
-      const causedByMessage = JSON.stringify(errorCause) as string | undefined
+      // bigint and symbol have no JSON form, so String() keeps them readable;
+      // safeStringify returns undefined for e.g. functions
+      const causedByMessage =
+        typeof errorCause === 'bigint' || typeof errorCause === 'symbol'
+          ? String(errorCause)
+          : safeStringify(errorCause)
       if (causedByMessage !== undefined) {
         response[ErrorSymbols.causedByMessage] = causedByMessage
       }
